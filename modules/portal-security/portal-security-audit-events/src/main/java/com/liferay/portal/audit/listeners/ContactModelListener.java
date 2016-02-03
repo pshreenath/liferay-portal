@@ -20,6 +20,7 @@ import com.liferay.portal.audit.listeners.util.AuditMessageBuilder;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.exception.ModelListenerException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.model.BaseModelListener;
 import com.liferay.portal.model.Contact;
@@ -55,7 +56,7 @@ public class ContactModelListener extends BaseModelListener<Contact> {
 						EventTypes.UPDATE, User.class.getName(),
 						newContact.getClassPK(), attributes);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		catch (Exception e) {
@@ -69,30 +70,35 @@ public class ContactModelListener extends BaseModelListener<Contact> {
 		AttributesBuilder attributesBuilder = new AttributesBuilder(
 			newContact, oldContact);
 
-		attributesBuilder.add("aimSn");
+		//attributesBuilder.add("aimSn");
 		attributesBuilder.add("birthday");
 		attributesBuilder.add("employeeNumber");
 		attributesBuilder.add("employeeStatusId");
 		attributesBuilder.add("facebookSn");
 		attributesBuilder.add("firstName");
 		attributesBuilder.add("hoursOfOperation");
-		attributesBuilder.add("icqSn");
+		//attributesBuilder.add("icqSn");
 		attributesBuilder.add("jabberSn");
 		attributesBuilder.add("jobClass");
 		attributesBuilder.add("jobTitle");
 		attributesBuilder.add("lastName");
 		attributesBuilder.add("male");
 		attributesBuilder.add("middleName");
-		attributesBuilder.add("msnSn");
-		attributesBuilder.add("mySpaceSn");
+		//attributesBuilder.add("msnSn");
+		//attributesBuilder.add("mySpaceSn");
 		attributesBuilder.add("prefixId");
 		attributesBuilder.add("skypeSn");
 		attributesBuilder.add("smsSn");
 		attributesBuilder.add("suffixId");
 		attributesBuilder.add("twitterSn");
-		attributesBuilder.add("ymSn");
+		//attributesBuilder.add("ymSn");
 
 		return attributesBuilder.getAttributes();
+	}
+
+	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
 	}
 
 	@Reference(unbind = "-")
@@ -102,6 +108,7 @@ public class ContactModelListener extends BaseModelListener<Contact> {
 		_contactLocalService = contactLocalService;
 	}
 
+	private AuditRouter _auditRouter;
 	private ContactLocalService _contactLocalService;
 
 }

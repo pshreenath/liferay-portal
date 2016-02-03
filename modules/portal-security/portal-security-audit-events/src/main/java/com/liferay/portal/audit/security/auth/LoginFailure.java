@@ -17,6 +17,7 @@ package com.liferay.portal.audit.security.auth;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.kernel.audit.AuditException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
@@ -25,6 +26,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.AuthFailure;
 import com.liferay.portal.model.User;
 import com.liferay.portal.service.UserLocalServiceUtil;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.Map;
 
@@ -47,7 +49,7 @@ public class LoginFailure implements AuthFailure {
 			AuditMessage auditMessage = buildAuditMessage(
 				user, headerMap, "Failed to authenticate by email address");
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (AuditException ae) {
 			if (_log.isWarnEnabled()) {
@@ -70,7 +72,7 @@ public class LoginFailure implements AuthFailure {
 			AuditMessage auditMessage = buildAuditMessage(
 				user, headerMap, "Failed to authenticate by screen name");
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (AuditException ae) {
 			if (_log.isWarnEnabled()) {
@@ -92,7 +94,7 @@ public class LoginFailure implements AuthFailure {
 			AuditMessage auditMessage = buildAuditMessage(
 				user, headerMap, "Failed to authenticate by user id");
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (AuditException ae) {
 			if (_log.isWarnEnabled()) {
@@ -119,6 +121,13 @@ public class LoginFailure implements AuthFailure {
 		return auditMessage;
 	}
 
+	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
+	}
+
 	private static final Log _log = LogFactoryUtil.getLog(LoginFailure.class);
+
+	private AuditRouter _auditRouter;
 
 }

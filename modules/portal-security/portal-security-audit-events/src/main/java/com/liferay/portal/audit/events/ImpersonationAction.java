@@ -16,6 +16,7 @@ package com.liferay.portal.audit.events;
 
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.events.Action;
 import com.liferay.portal.kernel.events.ActionException;
@@ -96,12 +97,17 @@ public class ImpersonationAction extends Action {
 					User.class.getName(), String.valueOf(user.getUserId()),
 					null, additionalInfo);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		else if (impersonatingUser != null) {
 			session.removeAttribute(_IMPERSONATING_USER);
 		}
+	}
+
+	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
 	}
 
 	@Reference(unbind = "-")
@@ -111,7 +117,7 @@ public class ImpersonationAction extends Action {
 
 	private static final String _IMPERSONATING_USER =
 		ImpersonationAction.class + ".IMPERSONATING_USER";
-
-	private static JSONFactory _jsonFactory;
+	private AuditRouter _auditRouter;
+	private JSONFactory _jsonFactory;
 
 }

@@ -20,6 +20,7 @@ import com.liferay.portal.audit.listeners.util.AuditMessageBuilder;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.exception.ModelListenerException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.model.*;
@@ -81,7 +82,7 @@ public class RoleModelListener extends BaseModelListener<Role> {
 						EventTypes.UPDATE, Role.class.getName(),
 						newRole.getRoleId(), attributes);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		catch (Exception e) {
@@ -128,7 +129,7 @@ public class RoleModelListener extends BaseModelListener<Role> {
 
 			additionalInfo.put("roleName", role.getName());
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (Exception e) {
 			throw new ModelListenerException(e);
@@ -142,7 +143,7 @@ public class RoleModelListener extends BaseModelListener<Role> {
 			AuditMessage auditMessage = AuditMessageBuilder.buildAuditMessage(
 				eventType, Role.class.getName(), role.getRoleId(), null);
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (Exception e) {
 			throw new ModelListenerException(e);
@@ -164,6 +165,11 @@ public class RoleModelListener extends BaseModelListener<Role> {
 	}
 
 	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
+	}
+
+	@Reference(unbind = "-")
 	protected void setGroupLocalService(GroupLocalService groupLocalService) {
 		_groupLocalService = groupLocalService;
 	}
@@ -173,6 +179,7 @@ public class RoleModelListener extends BaseModelListener<Role> {
 		_roleLocalService = roleLocalService;
 	}
 
+	private AuditRouter _auditRouter;
 	private GroupLocalService _groupLocalService;
 	private RoleLocalService _roleLocalService;
 

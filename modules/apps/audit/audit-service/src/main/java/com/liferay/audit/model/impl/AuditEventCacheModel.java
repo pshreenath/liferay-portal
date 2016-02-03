@@ -198,7 +198,9 @@ public class AuditEventCacheModel implements CacheModel<AuditEvent>,
 	@Override
 	public void readExternal(ObjectInput objectInput) throws IOException {
 		auditEventId = objectInput.readLong();
+
 		companyId = objectInput.readLong();
+
 		userId = objectInput.readLong();
 		userName = objectInput.readUTF();
 		createDate = objectInput.readLong();
@@ -209,6 +211,7 @@ public class AuditEventCacheModel implements CacheModel<AuditEvent>,
 		clientHost = objectInput.readUTF();
 		clientIP = objectInput.readUTF();
 		serverName = objectInput.readUTF();
+
 		serverPort = objectInput.readInt();
 		sessionID = objectInput.readUTF();
 		additionalInfo = objectInput.readUTF();
@@ -218,7 +221,9 @@ public class AuditEventCacheModel implements CacheModel<AuditEvent>,
 	public void writeExternal(ObjectOutput objectOutput)
 		throws IOException {
 		objectOutput.writeLong(auditEventId);
+
 		objectOutput.writeLong(companyId);
+
 		objectOutput.writeLong(userId);
 
 		if (userName == null) {

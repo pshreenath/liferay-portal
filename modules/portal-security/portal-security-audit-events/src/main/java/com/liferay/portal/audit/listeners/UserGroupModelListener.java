@@ -20,6 +20,7 @@ import com.liferay.portal.audit.listeners.util.AuditMessageBuilder;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.exception.ModelListenerException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.model.*;
@@ -88,7 +89,7 @@ public class UserGroupModelListener extends BaseModelListener<UserGroup> {
 						EventTypes.UPDATE, UserGroup.class.getName(),
 						newUserGroup.getUserGroupId(), attributes);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		catch (Exception e) {
@@ -135,7 +136,7 @@ public class UserGroupModelListener extends BaseModelListener<UserGroup> {
 
 			additionalInfo.put("userGroupName", userGroup.getName());
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (Exception e) {
 			throw new ModelListenerException(e);
@@ -150,7 +151,7 @@ public class UserGroupModelListener extends BaseModelListener<UserGroup> {
 				eventType, UserGroup.class.getName(),
 				userGroup.getUserGroupId(), null);
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (Exception e) {
 			throw new ModelListenerException(e);
@@ -170,6 +171,11 @@ public class UserGroupModelListener extends BaseModelListener<UserGroup> {
 	}
 
 	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
+	}
+
+	@Reference(unbind = "-")
 	protected void setGroupLocalService(GroupLocalService groupLocalService) {
 		_groupLocalService = groupLocalService;
 	}
@@ -181,6 +187,7 @@ public class UserGroupModelListener extends BaseModelListener<UserGroup> {
 		_userGroupLocalService = userGroupLocalService;
 	}
 
+	private AuditRouter _auditRouter;
 	private GroupLocalService _groupLocalService;
 	private UserGroupLocalService _userGroupLocalService;
 

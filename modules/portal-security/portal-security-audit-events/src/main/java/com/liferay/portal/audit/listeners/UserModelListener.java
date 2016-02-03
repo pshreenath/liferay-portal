@@ -20,6 +20,7 @@ import com.liferay.portal.audit.listeners.util.AuditMessageBuilder;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.exception.ModelListenerException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.model.BaseModelListener;
@@ -60,7 +61,7 @@ public class UserModelListener extends BaseModelListener<User> {
 						EventTypes.UPDATE, User.class.getName(),
 						newUser.getUserId(), attributes);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		catch (Exception e) {
@@ -82,7 +83,7 @@ public class UserModelListener extends BaseModelListener<User> {
 			additionalInfo.put("userId", user.getUserId());
 			additionalInfo.put("userName", user.getFullName());
 
-			AuditRouterUtil.route(auditMessage);
+			_auditRouter.route(auditMessage);
 		}
 		catch (Exception e) {
 			throw new ModelListenerException(e);
@@ -115,10 +116,16 @@ public class UserModelListener extends BaseModelListener<User> {
 	}
 
 	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
+	}
+
+	@Reference(unbind = "-")
 	protected void setUserLocalService(UserLocalService userLocalService) {
 		_userLocalService = userLocalService;
 	}
 
+	private  AuditRouter _auditRouter;
 	private UserLocalService _userLocalService;
 
 }

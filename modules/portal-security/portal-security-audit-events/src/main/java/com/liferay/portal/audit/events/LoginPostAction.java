@@ -16,6 +16,7 @@ package com.liferay.portal.audit.events;
 
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.events.Action;
 import com.liferay.portal.kernel.events.ActionException;
@@ -63,14 +64,19 @@ public class LoginPostAction extends Action {
 			user.getFullName(), User.class.getName(),
 			String.valueOf(user.getUserId()));
 
-		AuditRouterUtil.route(auditMessage);
+		_auditRouter.route(auditMessage);
+	}
+
+	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
 	}
 
 	@Reference(unbind = "-")
 	protected void setPortal(Portal portal) {
 		_portal = portal;
 	}
-
+	private AuditRouter _auditRouter;
 	private Portal _portal;
 
 }

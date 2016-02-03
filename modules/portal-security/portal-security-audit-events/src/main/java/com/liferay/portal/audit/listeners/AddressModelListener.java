@@ -20,6 +20,7 @@ import com.liferay.portal.audit.listeners.util.AuditMessageBuilder;
 import com.liferay.portal.audit.util.EventTypes;
 import com.liferay.portal.exception.ModelListenerException;
 import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.model.Address;
 import com.liferay.portal.model.BaseModelListener;
@@ -61,7 +62,7 @@ public class AddressModelListener extends BaseModelListener<Address> {
 						EventTypes.UPDATE, User.class.getName(),
 						newAddress.getClassPK(), attributes);
 
-				AuditRouterUtil.route(auditMessage);
+				_auditRouter.route(auditMessage);
 			}
 		}
 		catch (Exception e) {
@@ -90,6 +91,11 @@ public class AddressModelListener extends BaseModelListener<Address> {
 	}
 
 	@Reference(unbind = "-")
+	protected void setAuditRouter(AuditRouter auditRouter) {
+		_auditRouter = auditRouter;
+	}
+
+	@Reference(unbind = "-")
 	protected void setAddressLocalService(
 		AddressLocalService addressLocalService) {
 
@@ -97,5 +103,5 @@ public class AddressModelListener extends BaseModelListener<Address> {
 	}
 
 	private AddressLocalService _addressLocalService;
-
+	private AuditRouter _auditRouter;
 }

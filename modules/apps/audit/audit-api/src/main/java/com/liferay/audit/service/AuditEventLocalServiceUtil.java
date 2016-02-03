@@ -53,6 +53,11 @@ public class AuditEventLocalServiceUtil {
 		return getService().addAuditEvent(auditEvent);
 	}
 
+	public static com.liferay.audit.model.AuditEvent addAuditEvent(
+		com.liferay.portal.kernel.audit.AuditMessage auditMessage) {
+		return getService().addAuditEvent(auditMessage);
+	}
+
 	/**
 	* Creates a new audit event with the primary key. Does not add the audit event to the database.
 	*
@@ -197,6 +202,28 @@ public class AuditEventLocalServiceUtil {
 		return getService().getAuditEvent(auditEventId);
 	}
 
+	public static java.util.List<com.liferay.audit.model.AuditEvent> getAuditEvents(
+		long companyId, int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator orderByComparator) {
+		return getService()
+				   .getAuditEvents(companyId, start, end, orderByComparator);
+	}
+
+	public static java.util.List<com.liferay.audit.model.AuditEvent> getAuditEvents(
+		long companyId, long userId, java.lang.String userName,
+		java.util.Date createDateGT, java.util.Date createDateLT,
+		java.lang.String eventType, java.lang.String className,
+		java.lang.String classPK, java.lang.String clientHost,
+		java.lang.String clientIP, java.lang.String serverName, int serverPort,
+		java.lang.String sessionID, boolean andSearch, int start, int end,
+		com.liferay.portal.kernel.util.OrderByComparator orderByComparator) {
+		return getService()
+				   .getAuditEvents(companyId, userId, userName, createDateGT,
+			createDateLT, eventType, className, classPK, clientHost, clientIP,
+			serverName, serverPort, sessionID, andSearch, start, end,
+			orderByComparator);
+	}
+
 	/**
 	* Returns a range of all the audit events.
 	*
@@ -220,6 +247,23 @@ public class AuditEventLocalServiceUtil {
 	*/
 	public static int getAuditEventsCount() {
 		return getService().getAuditEventsCount();
+	}
+
+	public static int getAuditEventsCount(long companyId) {
+		return getService().getAuditEventsCount(companyId);
+	}
+
+	public static int getAuditEventsCount(long companyId, long userId,
+		java.lang.String userName, java.util.Date createDateGT,
+		java.util.Date createDateLT, java.lang.String eventType,
+		java.lang.String className, java.lang.String classPK,
+		java.lang.String clientHost, java.lang.String clientIP,
+		java.lang.String serverName, int serverPort,
+		java.lang.String sessionID, boolean andSearch) {
+		return getService()
+				   .getAuditEventsCount(companyId, userId, userName,
+			createDateGT, createDateLT, eventType, className, classPK,
+			clientHost, clientIP, serverName, serverPort, sessionID, andSearch);
 	}
 
 	public static com.liferay.portal.kernel.dao.orm.IndexableActionableDynamicQuery getIndexableActionableDynamicQuery() {

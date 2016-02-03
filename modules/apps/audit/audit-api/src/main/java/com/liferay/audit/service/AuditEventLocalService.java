@@ -18,6 +18,7 @@ import aQute.bnd.annotation.ProviderType;
 
 import com.liferay.audit.model.AuditEvent;
 
+import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.IndexableActionableDynamicQuery;
@@ -36,6 +37,7 @@ import com.liferay.portal.service.PersistedModelLocalService;
 
 import java.io.Serializable;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -69,6 +71,8 @@ public interface AuditEventLocalService extends BaseLocalService,
 	*/
 	@Indexable(type = IndexableType.REINDEX)
 	public AuditEvent addAuditEvent(AuditEvent auditEvent);
+
+	public AuditEvent addAuditEvent(AuditMessage auditMessage);
 
 	/**
 	* Creates a new audit event with the primary key. Does not add the audit event to the database.
@@ -181,6 +185,19 @@ public interface AuditEventLocalService extends BaseLocalService,
 	public AuditEvent getAuditEvent(long auditEventId)
 		throws PortalException;
 
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public List<AuditEvent> getAuditEvents(long companyId, int start, int end,
+		OrderByComparator orderByComparator);
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public List<AuditEvent> getAuditEvents(long companyId, long userId,
+		java.lang.String userName, Date createDateGT, Date createDateLT,
+		java.lang.String eventType, java.lang.String className,
+		java.lang.String classPK, java.lang.String clientHost,
+		java.lang.String clientIP, java.lang.String serverName, int serverPort,
+		java.lang.String sessionID, boolean andSearch, int start, int end,
+		OrderByComparator orderByComparator);
+
 	/**
 	* Returns a range of all the audit events.
 	*
@@ -202,6 +219,17 @@ public interface AuditEventLocalService extends BaseLocalService,
 	*/
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getAuditEventsCount();
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public int getAuditEventsCount(long companyId);
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public int getAuditEventsCount(long companyId, long userId,
+		java.lang.String userName, Date createDateGT, Date createDateLT,
+		java.lang.String eventType, java.lang.String className,
+		java.lang.String classPK, java.lang.String clientHost,
+		java.lang.String clientIP, java.lang.String serverName, int serverPort,
+		java.lang.String sessionID, boolean andSearch);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public IndexableActionableDynamicQuery getIndexableActionableDynamicQuery();

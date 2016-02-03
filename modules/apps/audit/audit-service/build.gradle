@@ -10,6 +10,8 @@ buildService {
 
 dependencies {
 
+    compile project(":apps:audit:audit-api")
+
     compile group: "com.liferay", name: "com.liferay.portal.spring.extender", version: "1.0.2"
 
     provided group: "com.liferay.portal", name: "util-java", version: liferay.portalVersion

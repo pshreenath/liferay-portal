@@ -8,11 +8,11 @@ name: start-work
 
 # Start Work on a Jira Ticket
 
-Prepare a Liferay ticket for development. Drive every Jira interaction through the Jira Cloud REST API at `liferay.atlassian.net`, authenticated with `${JIRA_API_USER}` / `${JIRA_API_TOKEN}`.
+Prepare a Liferay ticket for development.
 
 ## 1. Resolve the Ticket
 
-Accept a key (`LPD-86295`) or a browse URL from `${ARGUMENTS}`. Ask the user when nothing is supplied.
+Accept a key (`LPD-86295`) or a browse URL from `${ARGUMENTS}`. When nothing is supplied and `${PWD}` matches `*/liferay-portal-<KEY>` where `<KEY>` matches the Jira pattern `[A-Z]+-[0-9]+`, derive the key from the directory name. Otherwise, ask the user.
 
 ## 2. Prerequisites
 
@@ -30,7 +30,7 @@ Fetch the ticket (issue type, current assignee, subtasks) and resolve the **targ
 Assign the parent to the user and apply the transitions below. If the parent is already in an in-progress status by a different user, refuse to continue.
 
 | Parent Type | Destination | Transition IDs |
-| ----------- | -------------- | --------------- |
+| --- | --- | --- |
 | Bug | In Progress | `61` |
 | Story | In Development | `41`, then `61` |
 | Task | In Progress | `21` |
@@ -42,12 +42,12 @@ For a Story, apply the two transitions in sequence: `41` moves it to **Ready for
 Skip for **Bug**. For **Story** / **Task**, refetch the parent's subtasks until the **Technical Task** appears, then assign it to the user and transition it:
 
 | Child Type | Destination | Transition ID |
-| -------------- | ----------- | ------------- |
+| --- | --- | --- |
 | Technical Task | In Progress | `41` |
 
 ## 6. Create a Git Branch
 
-Branch off the current HEAD, named after the **target** key. When the branch already exists, check it out instead.
+Branch off the current HEAD, named after the **target** key. When the branch already exists, check it out instead. When `${PWD}` matches `*/liferay-portal-<name>`, the session is running inside a Liferay worktree that already has branch `<name>` checked out — skip this step and invoke the `worktree-setup` skill (action `new`) instead to provision the bundle, ports, and database.
 
 ## 7. Make a Plan
 

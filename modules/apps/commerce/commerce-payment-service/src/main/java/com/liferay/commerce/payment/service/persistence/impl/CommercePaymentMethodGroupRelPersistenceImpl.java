@@ -18,7 +18,6 @@ import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -34,10 +33,7 @@ import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinder;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 
@@ -70,7 +66,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommercePaymentMethodGroupRelPersistence.class)
 public class CommercePaymentMethodGroupRelPersistenceImpl
-	extends BasePersistenceImpl<CommercePaymentMethodGroupRel>
+	extends BasePersistenceImpl
+		<CommercePaymentMethodGroupRel, NoSuchPaymentMethodGroupRelException>
 	implements CommercePaymentMethodGroupRelPersistence {
 
 	/*
@@ -87,9 +84,6 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByGroupId;
 	private FinderPath _finderPathWithoutPaginationFindByGroupId;
 	private FinderPath _finderPathCountByGroupId;
@@ -308,7 +302,7 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -678,7 +672,7 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -945,127 +939,6 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	}
 
 	/**
-	 * Caches the commerce payment method group rel in the entity cache if it is enabled.
-	 *
-	 * @param commercePaymentMethodGroupRel the commerce payment method group rel
-	 */
-	@Override
-	public void cacheResult(
-		CommercePaymentMethodGroupRel commercePaymentMethodGroupRel) {
-
-		entityCache.putResult(
-			CommercePaymentMethodGroupRelImpl.class,
-			commercePaymentMethodGroupRel.getPrimaryKey(),
-			commercePaymentMethodGroupRel);
-
-		finderCache.putResult(
-			_finderPathFetchByG_P,
-			new Object[] {
-				commercePaymentMethodGroupRel.getGroupId(),
-				commercePaymentMethodGroupRel.getPaymentIntegrationKey()
-			},
-			commercePaymentMethodGroupRel);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the commerce payment method group rels in the entity cache if it is enabled.
-	 *
-	 * @param commercePaymentMethodGroupRels the commerce payment method group rels
-	 */
-	@Override
-	public void cacheResult(
-		List<CommercePaymentMethodGroupRel> commercePaymentMethodGroupRels) {
-
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (commercePaymentMethodGroupRels.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (CommercePaymentMethodGroupRel commercePaymentMethodGroupRel :
-				commercePaymentMethodGroupRels) {
-
-			if (entityCache.getResult(
-					CommercePaymentMethodGroupRelImpl.class,
-					commercePaymentMethodGroupRel.getPrimaryKey()) == null) {
-
-				cacheResult(commercePaymentMethodGroupRel);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all commerce payment method group rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CommercePaymentMethodGroupRelImpl.class);
-
-		finderCache.clearCache(CommercePaymentMethodGroupRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce payment method group rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		CommercePaymentMethodGroupRel commercePaymentMethodGroupRel) {
-
-		entityCache.removeResult(
-			CommercePaymentMethodGroupRelImpl.class,
-			commercePaymentMethodGroupRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<CommercePaymentMethodGroupRel> commercePaymentMethodGroupRels) {
-
-		for (CommercePaymentMethodGroupRel commercePaymentMethodGroupRel :
-				commercePaymentMethodGroupRels) {
-
-			entityCache.removeResult(
-				CommercePaymentMethodGroupRelImpl.class,
-				commercePaymentMethodGroupRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CommercePaymentMethodGroupRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CommercePaymentMethodGroupRelImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		CommercePaymentMethodGroupRelModelImpl
-			commercePaymentMethodGroupRelModelImpl) {
-
-		Object[] args = new Object[] {
-			commercePaymentMethodGroupRelModelImpl.getGroupId(),
-			commercePaymentMethodGroupRelModelImpl.getPaymentIntegrationKey()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByG_P, args,
-			commercePaymentMethodGroupRelModelImpl);
-	}
-
-	/**
 	 * Creates a new commerce payment method group rel with the primary key. Does not add the commerce payment method group rel to the database.
 	 *
 	 * @param commercePaymentMethodGroupRelId the primary key for the new commerce payment method group rel
@@ -1101,48 +974,6 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 		throws NoSuchPaymentMethodGroupRelException {
 
 		return remove((Serializable)commercePaymentMethodGroupRelId);
-	}
-
-	/**
-	 * Removes the commerce payment method group rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce payment method group rel
-	 * @return the commerce payment method group rel that was removed
-	 * @throws NoSuchPaymentMethodGroupRelException if a commerce payment method group rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePaymentMethodGroupRel remove(Serializable primaryKey)
-		throws NoSuchPaymentMethodGroupRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommercePaymentMethodGroupRel commercePaymentMethodGroupRel =
-				(CommercePaymentMethodGroupRel)session.get(
-					CommercePaymentMethodGroupRelImpl.class, primaryKey);
-
-			if (commercePaymentMethodGroupRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPaymentMethodGroupRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commercePaymentMethodGroupRel);
-		}
-		catch (NoSuchPaymentMethodGroupRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1257,44 +1088,13 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			CommercePaymentMethodGroupRelImpl.class,
-			commercePaymentMethodGroupRelModelImpl, false, true);
-
-		cacheUniqueFindersCache(commercePaymentMethodGroupRelModelImpl);
+		cacheUniqueFindersResult(commercePaymentMethodGroupRel, false);
 
 		if (isNew) {
 			commercePaymentMethodGroupRel.setNew(false);
 		}
 
 		commercePaymentMethodGroupRel.resetOriginalValues();
-
-		return commercePaymentMethodGroupRel;
-	}
-
-	/**
-	 * Returns the commerce payment method group rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce payment method group rel
-	 * @return the commerce payment method group rel
-	 * @throws NoSuchPaymentMethodGroupRelException if a commerce payment method group rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePaymentMethodGroupRel findByPrimaryKey(
-			Serializable primaryKey)
-		throws NoSuchPaymentMethodGroupRelException {
-
-		CommercePaymentMethodGroupRel commercePaymentMethodGroupRel =
-			fetchByPrimaryKey(primaryKey);
-
-		if (commercePaymentMethodGroupRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPaymentMethodGroupRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return commercePaymentMethodGroupRel;
 	}
@@ -1327,191 +1127,6 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 		return fetchByPrimaryKey((Serializable)commercePaymentMethodGroupRelId);
 	}
 
-	/**
-	 * Returns all the commerce payment method group rels.
-	 *
-	 * @return the commerce payment method group rels
-	 */
-	@Override
-	public List<CommercePaymentMethodGroupRel> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the commerce payment method group rels.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentMethodGroupRelModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment method group rels
-	 * @param end the upper bound of the range of commerce payment method group rels (not inclusive)
-	 * @return the range of commerce payment method group rels
-	 */
-	@Override
-	public List<CommercePaymentMethodGroupRel> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce payment method group rels.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentMethodGroupRelModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment method group rels
-	 * @param end the upper bound of the range of commerce payment method group rels (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of commerce payment method group rels
-	 */
-	@Override
-	public List<CommercePaymentMethodGroupRel> findAll(
-		int start, int end,
-		OrderByComparator<CommercePaymentMethodGroupRel> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce payment method group rels.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentMethodGroupRelModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment method group rels
-	 * @param end the upper bound of the range of commerce payment method group rels (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of commerce payment method group rels
-	 */
-	@Override
-	public List<CommercePaymentMethodGroupRel> findAll(
-		int start, int end,
-		OrderByComparator<CommercePaymentMethodGroupRel> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<CommercePaymentMethodGroupRel> list = null;
-
-		if (useFinderCache) {
-			list = (List<CommercePaymentMethodGroupRel>)finderCache.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL;
-
-				sql = sql.concat(
-					CommercePaymentMethodGroupRelModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<CommercePaymentMethodGroupRel>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the commerce payment method group rels from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (CommercePaymentMethodGroupRel commercePaymentMethodGroupRel :
-				findAll()) {
-
-			remove(commercePaymentMethodGroupRel);
-		}
-	}
-
-	/**
-	 * Returns the number of commerce payment method group rels.
-	 *
-	 * @return the number of commerce payment method group rels
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)finderCache.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(
-					_SQL_COUNT_COMMERCEPAYMENTMETHODGROUPREL);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
-	}
-
 	@Override
 	public Set<String> getBadColumnNames() {
 		return _badColumnNames;
@@ -1542,21 +1157,6 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByGroupId = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByGroupId",
 			new String[] {
@@ -1583,7 +1183,7 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 				_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL_WHERE,
 				_SQL_COUNT_COMMERCEPAYMENTMETHODGROUPREL_WHERE,
 				CommercePaymentMethodGroupRelModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"commercePaymentMethodGroupRel.", "groupId",
 					FinderColumn.Type.LONG, "=", true, true,
@@ -1614,27 +1214,30 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 			_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL_WHERE,
 			_SQL_COUNT_COMMERCEPAYMENTMETHODGROUPREL_WHERE,
 			CommercePaymentMethodGroupRelModelImpl.ORDER_BY_JPQL,
-			_ORDER_BY_ENTITY_ALIAS,
+			_ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"commercePaymentMethodGroupRel.", "groupId",
-				FinderColumn.Type.LONG, "=", true, false,
+				FinderColumn.Type.LONG, "=", true, true,
 				CommercePaymentMethodGroupRel::getGroupId),
 			new FinderColumn<>(
 				"commercePaymentMethodGroupRel.", "active",
 				FinderColumn.Type.BOOLEAN, "=", true, true,
 				CommercePaymentMethodGroupRel::isActive));
 
-		_finderPathFetchByG_P = new FinderPath(
+		_finderPathFetchByG_P = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByG_P",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"groupId", "paymentIntegrationKey"}, true);
+			new String[] {"groupId", "paymentIntegrationKey"}, 0, 2, false,
+			CommercePaymentMethodGroupRel::getGroupId,
+			convertNullFunction(
+				CommercePaymentMethodGroupRel::getPaymentIntegrationKey));
 
 		_uniquePersistenceFinderByG_P = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByG_P,
-			_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL_WHERE,
+			_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL_WHERE, "",
 			new FinderColumn<>(
 				"commercePaymentMethodGroupRel.", "groupId",
-				FinderColumn.Type.LONG, "=", true, false,
+				FinderColumn.Type.LONG, "=", true, true,
 				CommercePaymentMethodGroupRel::getGroupId),
 			new FinderColumn<>(
 				"commercePaymentMethodGroupRel.", "paymentIntegrationKey",
@@ -1684,15 +1287,15 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		CommercePaymentMethodGroupRelModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL =
 		"SELECT commercePaymentMethodGroupRel FROM CommercePaymentMethodGroupRel commercePaymentMethodGroupRel";
 
 	private static final String
 		_SQL_SELECT_COMMERCEPAYMENTMETHODGROUPREL_WHERE =
 			"SELECT commercePaymentMethodGroupRel FROM CommercePaymentMethodGroupRel commercePaymentMethodGroupRel WHERE ";
-
-	private static final String _SQL_COUNT_COMMERCEPAYMENTMETHODGROUPREL =
-		"SELECT COUNT(commercePaymentMethodGroupRel) FROM CommercePaymentMethodGroupRel commercePaymentMethodGroupRel";
 
 	private static final String _SQL_COUNT_COMMERCEPAYMENTMETHODGROUPREL_WHERE =
 		"SELECT COUNT(commercePaymentMethodGroupRel) FROM CommercePaymentMethodGroupRel commercePaymentMethodGroupRel WHERE ";
@@ -1722,14 +1325,8 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	private static final String _FILTER_ENTITY_TABLE =
 		"CommercePaymentMethodGroupRel";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS =
-		"commercePaymentMethodGroupRel.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE =
 		"CommercePaymentMethodGroupRel.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommercePaymentMethodGroupRel exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommercePaymentMethodGroupRel exists with the key {";
@@ -1746,4 +1343,4 @@ public class CommercePaymentMethodGroupRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:667835426
+// LIFERAY-SERVICE-BUILDER-HASH:-832881994

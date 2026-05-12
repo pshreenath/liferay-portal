@@ -10,7 +10,6 @@ import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -34,8 +33,6 @@ import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinde
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -80,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = SXPElementPersistence.class)
 public class SXPElementPersistenceImpl
-	extends BasePersistenceImpl<SXPElement> implements SXPElementPersistence {
+	extends BasePersistenceImpl<SXPElement, NoSuchSXPElementException>
+	implements SXPElementPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -96,9 +94,6 @@ public class SXPElementPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -315,7 +310,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -700,7 +695,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1072,7 +1067,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1429,7 +1424,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1796,7 +1791,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2182,7 +2177,7 @@ public class SXPElementPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2449,103 +2444,6 @@ public class SXPElementPersistenceImpl
 	}
 
 	/**
-	 * Caches the sxp element in the entity cache if it is enabled.
-	 *
-	 * @param sxpElement the sxp element
-	 */
-	@Override
-	public void cacheResult(SXPElement sxpElement) {
-		entityCache.putResult(
-			SXPElementImpl.class, sxpElement.getPrimaryKey(), sxpElement);
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C,
-			new Object[] {
-				sxpElement.getExternalReferenceCode(), sxpElement.getCompanyId()
-			},
-			sxpElement);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the sxp elements in the entity cache if it is enabled.
-	 *
-	 * @param sxpElements the sxp elements
-	 */
-	@Override
-	public void cacheResult(List<SXPElement> sxpElements) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (sxpElements.size() > _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (SXPElement sxpElement : sxpElements) {
-			if (entityCache.getResult(
-					SXPElementImpl.class, sxpElement.getPrimaryKey()) == null) {
-
-				cacheResult(sxpElement);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all sxp elements.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(SXPElementImpl.class);
-
-		finderCache.clearCache(SXPElementImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the sxp element.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SXPElement sxpElement) {
-		entityCache.removeResult(SXPElementImpl.class, sxpElement);
-	}
-
-	@Override
-	public void clearCache(List<SXPElement> sxpElements) {
-		for (SXPElement sxpElement : sxpElements) {
-			entityCache.removeResult(SXPElementImpl.class, sxpElement);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(SXPElementImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(SXPElementImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		SXPElementModelImpl sxpElementModelImpl) {
-
-		Object[] args = new Object[] {
-			sxpElementModelImpl.getExternalReferenceCode(),
-			sxpElementModelImpl.getCompanyId()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C, args, sxpElementModelImpl);
-	}
-
-	/**
 	 * Creates a new sxp element with the primary key. Does not add the sxp element to the database.
 	 *
 	 * @param sxpElementId the primary key for the new sxp element
@@ -2579,47 +2477,6 @@ public class SXPElementPersistenceImpl
 		throws NoSuchSXPElementException {
 
 		return remove((Serializable)sxpElementId);
-	}
-
-	/**
-	 * Removes the sxp element with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the sxp element
-	 * @return the sxp element that was removed
-	 * @throws NoSuchSXPElementException if a sxp element with the primary key could not be found
-	 */
-	@Override
-	public SXPElement remove(Serializable primaryKey)
-		throws NoSuchSXPElementException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SXPElement sxpElement = (SXPElement)session.get(
-				SXPElementImpl.class, primaryKey);
-
-			if (sxpElement == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchSXPElementException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(sxpElement);
-		}
-		catch (NoSuchSXPElementException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2811,41 +2668,13 @@ public class SXPElementPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			SXPElementImpl.class, sxpElementModelImpl, false, true);
-
-		cacheUniqueFindersCache(sxpElementModelImpl);
+		cacheUniqueFindersResult(sxpElement, false);
 
 		if (isNew) {
 			sxpElement.setNew(false);
 		}
 
 		sxpElement.resetOriginalValues();
-
-		return sxpElement;
-	}
-
-	/**
-	 * Returns the sxp element with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the sxp element
-	 * @return the sxp element
-	 * @throws NoSuchSXPElementException if a sxp element with the primary key could not be found
-	 */
-	@Override
-	public SXPElement findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchSXPElementException {
-
-		SXPElement sxpElement = fetchByPrimaryKey(primaryKey);
-
-		if (sxpElement == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchSXPElementException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return sxpElement;
 	}
@@ -2873,185 +2702,6 @@ public class SXPElementPersistenceImpl
 	@Override
 	public SXPElement fetchByPrimaryKey(long sxpElementId) {
 		return fetchByPrimaryKey((Serializable)sxpElementId);
-	}
-
-	/**
-	 * Returns all the sxp elements.
-	 *
-	 * @return the sxp elements
-	 */
-	@Override
-	public List<SXPElement> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the sxp elements.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>SXPElementModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of sxp elements
-	 * @param end the upper bound of the range of sxp elements (not inclusive)
-	 * @return the range of sxp elements
-	 */
-	@Override
-	public List<SXPElement> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the sxp elements.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>SXPElementModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of sxp elements
-	 * @param end the upper bound of the range of sxp elements (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of sxp elements
-	 */
-	@Override
-	public List<SXPElement> findAll(
-		int start, int end, OrderByComparator<SXPElement> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the sxp elements.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>SXPElementModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of sxp elements
-	 * @param end the upper bound of the range of sxp elements (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of sxp elements
-	 */
-	@Override
-	public List<SXPElement> findAll(
-		int start, int end, OrderByComparator<SXPElement> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<SXPElement> list = null;
-
-		if (useFinderCache) {
-			list = (List<SXPElement>)finderCache.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_SXPELEMENT);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_SXPELEMENT;
-
-				sql = sql.concat(SXPElementModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<SXPElement>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the sxp elements from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (SXPElement sxpElement : findAll()) {
-			remove(sxpElement);
-		}
-	}
-
-	/**
-	 * Returns the number of sxp elements.
-	 *
-	 * @return the number of sxp elements
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)finderCache.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(_SQL_COUNT_SXPELEMENT);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
 	}
 
 	@Override
@@ -3084,21 +2734,6 @@ public class SXPElementPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -3109,19 +2744,19 @@ public class SXPElementPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_SXPELEMENT_WHERE, _SQL_COUNT_SXPELEMENT_WHERE,
-			SXPElementModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			SXPElementModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"sxpElement.", "uuid", FinderColumn.Type.STRING, "=", true,
 				true, SXPElement::getUuid));
@@ -3138,12 +2773,12 @@ public class SXPElementPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -3151,10 +2786,10 @@ public class SXPElementPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_SXPELEMENT_WHERE,
 				_SQL_COUNT_SXPELEMENT_WHERE, SXPElementModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"sxpElement.", "uuid", FinderColumn.Type.STRING, "=", true,
-					false, SXPElement::getUuid),
+					true, SXPElement::getUuid),
 				new FinderColumn<>(
 					"sxpElement.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, SXPElement::getCompanyId));
@@ -3183,7 +2818,7 @@ public class SXPElementPersistenceImpl
 				_finderPathWithoutPaginationFindByCompanyId,
 				_finderPathCountByCompanyId, _SQL_SELECT_SXPELEMENT_WHERE,
 				_SQL_COUNT_SXPELEMENT_WHERE, SXPElementModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"sxpElement.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, SXPElement::getCompanyId));
@@ -3211,10 +2846,10 @@ public class SXPElementPersistenceImpl
 			this, _finderPathWithPaginationFindByC_R,
 			_finderPathWithoutPaginationFindByC_R, _finderPathCountByC_R,
 			_SQL_SELECT_SXPELEMENT_WHERE, _SQL_COUNT_SXPELEMENT_WHERE,
-			SXPElementModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			SXPElementModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"sxpElement.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, SXPElement::getCompanyId),
+				true, SXPElement::getCompanyId),
 			new FinderColumn<>(
 				"sxpElement.", "readOnly", FinderColumn.Type.BOOLEAN, "=", true,
 				true, SXPElement::isReadOnly));
@@ -3242,10 +2877,10 @@ public class SXPElementPersistenceImpl
 			this, _finderPathWithPaginationFindByC_T,
 			_finderPathWithoutPaginationFindByC_T, _finderPathCountByC_T,
 			_SQL_SELECT_SXPELEMENT_WHERE, _SQL_COUNT_SXPELEMENT_WHERE,
-			SXPElementModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			SXPElementModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"sxpElement.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, SXPElement::getCompanyId),
+				true, SXPElement::getCompanyId),
 			new FinderColumn<>(
 				"sxpElement.", "type", FinderColumn.Type.INTEGER, "=", true,
 				true, SXPElement::getType));
@@ -3279,27 +2914,29 @@ public class SXPElementPersistenceImpl
 			this, _finderPathWithPaginationFindByC_T_S,
 			_finderPathWithoutPaginationFindByC_T_S, _finderPathCountByC_T_S,
 			_SQL_SELECT_SXPELEMENT_WHERE, _SQL_COUNT_SXPELEMENT_WHERE,
-			SXPElementModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			SXPElementModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"sxpElement.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, SXPElement::getCompanyId),
+				true, SXPElement::getCompanyId),
 			new FinderColumn<>(
 				"sxpElement.", "type", FinderColumn.Type.INTEGER, "=", true,
-				false, SXPElement::getType),
+				true, SXPElement::getType),
 			new FinderColumn<>(
 				"sxpElement.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, SXPElement::getStatus));
 
-		_finderPathFetchByERC_C = new FinderPath(
+		_finderPathFetchByERC_C = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "companyId"}, true);
+			new String[] {"externalReferenceCode", "companyId"}, 0, 1, false,
+			convertNullFunction(SXPElement::getExternalReferenceCode),
+			SXPElement::getCompanyId);
 
 		_uniquePersistenceFinderByERC_C = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByERC_C, _SQL_SELECT_SXPELEMENT_WHERE,
+			this, _finderPathFetchByERC_C, _SQL_SELECT_SXPELEMENT_WHERE, "",
 			new FinderColumn<>(
 				"sxpElement.", "externalReferenceCode",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				SXPElement::getExternalReferenceCode),
 			new FinderColumn<>(
 				"sxpElement.", "companyId", FinderColumn.Type.LONG, "=", true,
@@ -3347,14 +2984,14 @@ public class SXPElementPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		SXPElementModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_SXPELEMENT =
 		"SELECT sxpElement FROM SXPElement sxpElement";
 
 	private static final String _SQL_SELECT_SXPELEMENT_WHERE =
 		"SELECT sxpElement FROM SXPElement sxpElement WHERE ";
-
-	private static final String _SQL_COUNT_SXPELEMENT =
-		"SELECT COUNT(sxpElement) FROM SXPElement sxpElement";
 
 	private static final String _SQL_COUNT_SXPELEMENT_WHERE =
 		"SELECT COUNT(sxpElement) FROM SXPElement sxpElement WHERE ";
@@ -3380,12 +3017,7 @@ public class SXPElementPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "SXPElement";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "sxpElement.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "SXPElement.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SXPElement exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SXPElement exists with the key {";
@@ -3402,4 +3034,4 @@ public class SXPElementPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1289878688
+// LIFERAY-SERVICE-BUILDER-HASH:1347570115

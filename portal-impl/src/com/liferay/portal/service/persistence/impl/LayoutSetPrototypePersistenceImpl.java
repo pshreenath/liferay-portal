@@ -7,14 +7,12 @@ package com.liferay.portal.service.persistence.impl;
 
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.EntityCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -30,14 +28,12 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.LayoutSetPrototypePersistence;
 import com.liferay.portal.kernel.service.persistence.LayoutSetPrototypeUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -55,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +67,8 @@ import java.util.Set;
  * @generated
  */
 public class LayoutSetPrototypePersistenceImpl
-	extends BasePersistenceImpl<LayoutSetPrototype>
+	extends BasePersistenceImpl
+		<LayoutSetPrototype, NoSuchLayoutSetPrototypeException>
 	implements LayoutSetPrototypePersistence {
 
 	/*
@@ -89,9 +85,6 @@ public class LayoutSetPrototypePersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -322,7 +315,7 @@ public class LayoutSetPrototypePersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -727,7 +720,7 @@ public class LayoutSetPrototypePersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1120,7 +1113,7 @@ public class LayoutSetPrototypePersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1497,7 +1490,7 @@ public class LayoutSetPrototypePersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1669,100 +1662,6 @@ public class LayoutSetPrototypePersistenceImpl
 	}
 
 	/**
-	 * Caches the layout set prototype in the entity cache if it is enabled.
-	 *
-	 * @param layoutSetPrototype the layout set prototype
-	 */
-	@Override
-	public void cacheResult(LayoutSetPrototype layoutSetPrototype) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					layoutSetPrototype.getCtCollectionId())) {
-
-			EntityCacheUtil.putResult(
-				LayoutSetPrototypeImpl.class,
-				layoutSetPrototype.getPrimaryKey(), layoutSetPrototype);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the layout set prototypes in the entity cache if it is enabled.
-	 *
-	 * @param layoutSetPrototypes the layout set prototypes
-	 */
-	@Override
-	public void cacheResult(List<LayoutSetPrototype> layoutSetPrototypes) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (layoutSetPrototypes.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (LayoutSetPrototype layoutSetPrototype : layoutSetPrototypes) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						layoutSetPrototype.getCtCollectionId())) {
-
-				if (EntityCacheUtil.getResult(
-						LayoutSetPrototypeImpl.class,
-						layoutSetPrototype.getPrimaryKey()) == null) {
-
-					cacheResult(layoutSetPrototype);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all layout set prototypes.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(LayoutSetPrototypeImpl.class);
-
-		FinderCacheUtil.clearCache(LayoutSetPrototypeImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout set prototype.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(LayoutSetPrototype layoutSetPrototype) {
-		EntityCacheUtil.removeResult(
-			LayoutSetPrototypeImpl.class, layoutSetPrototype);
-	}
-
-	@Override
-	public void clearCache(List<LayoutSetPrototype> layoutSetPrototypes) {
-		for (LayoutSetPrototype layoutSetPrototype : layoutSetPrototypes) {
-			EntityCacheUtil.removeResult(
-				LayoutSetPrototypeImpl.class, layoutSetPrototype);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(LayoutSetPrototypeImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				LayoutSetPrototypeImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new layout set prototype with the primary key. Does not add the layout set prototype to the database.
 	 *
 	 * @param layoutSetPrototypeId the primary key for the new layout set prototype
@@ -1796,48 +1695,6 @@ public class LayoutSetPrototypePersistenceImpl
 		throws NoSuchLayoutSetPrototypeException {
 
 		return remove((Serializable)layoutSetPrototypeId);
-	}
-
-	/**
-	 * Removes the layout set prototype with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout set prototype
-	 * @return the layout set prototype that was removed
-	 * @throws NoSuchLayoutSetPrototypeException if a layout set prototype with the primary key could not be found
-	 */
-	@Override
-	public LayoutSetPrototype remove(Serializable primaryKey)
-		throws NoSuchLayoutSetPrototypeException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutSetPrototype layoutSetPrototype =
-				(LayoutSetPrototype)session.get(
-					LayoutSetPrototypeImpl.class, primaryKey);
-
-			if (layoutSetPrototype == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutSetPrototypeException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutSetPrototype);
-		}
-		catch (NoSuchLayoutSetPrototypeException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1958,40 +1815,13 @@ public class LayoutSetPrototypePersistenceImpl
 			closeSession(session);
 		}
 
-		EntityCacheUtil.putResult(
-			LayoutSetPrototypeImpl.class, layoutSetPrototypeModelImpl, false,
-			true);
+		cacheUniqueFindersResult(layoutSetPrototype, false);
 
 		if (isNew) {
 			layoutSetPrototype.setNew(false);
 		}
 
 		layoutSetPrototype.resetOriginalValues();
-
-		return layoutSetPrototype;
-	}
-
-	/**
-	 * Returns the layout set prototype with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout set prototype
-	 * @return the layout set prototype
-	 * @throws NoSuchLayoutSetPrototypeException if a layout set prototype with the primary key could not be found
-	 */
-	@Override
-	public LayoutSetPrototype findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutSetPrototypeException {
-
-		LayoutSetPrototype layoutSetPrototype = fetchByPrimaryKey(primaryKey);
-
-		if (layoutSetPrototype == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutSetPrototypeException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return layoutSetPrototype;
 	}
@@ -2010,53 +1840,9 @@ public class LayoutSetPrototypePersistenceImpl
 		return findByPrimaryKey((Serializable)layoutSetPrototypeId);
 	}
 
-	/**
-	 * Returns the layout set prototype with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout set prototype
-	 * @return the layout set prototype, or <code>null</code> if a layout set prototype with the primary key could not be found
-	 */
 	@Override
-	public LayoutSetPrototype fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				LayoutSetPrototype.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutSetPrototype layoutSetPrototype =
-			(LayoutSetPrototype)EntityCacheUtil.getResult(
-				LayoutSetPrototypeImpl.class, primaryKey);
-
-		if (layoutSetPrototype != null) {
-			return layoutSetPrototype;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutSetPrototype = (LayoutSetPrototype)session.get(
-				LayoutSetPrototypeImpl.class, primaryKey);
-
-			if (layoutSetPrototype != null) {
-				cacheResult(layoutSetPrototype);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutSetPrototype;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -2068,328 +1854,6 @@ public class LayoutSetPrototypePersistenceImpl
 	@Override
 	public LayoutSetPrototype fetchByPrimaryKey(long layoutSetPrototypeId) {
 		return fetchByPrimaryKey((Serializable)layoutSetPrototypeId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutSetPrototype> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				LayoutSetPrototype.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutSetPrototype> map =
-			new HashMap<Serializable, LayoutSetPrototype>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutSetPrototype layoutSetPrototype = fetchByPrimaryKey(
-				primaryKey);
-
-			if (layoutSetPrototype != null) {
-				map.put(primaryKey, layoutSetPrototype);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						LayoutSetPrototype.class, primaryKey)) {
-
-				LayoutSetPrototype layoutSetPrototype =
-					(LayoutSetPrototype)EntityCacheUtil.getResult(
-						LayoutSetPrototypeImpl.class, primaryKey);
-
-				if (layoutSetPrototype == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutSetPrototype);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutSetPrototype layoutSetPrototype :
-					(List<LayoutSetPrototype>)query.list()) {
-
-				map.put(
-					layoutSetPrototype.getPrimaryKeyObj(), layoutSetPrototype);
-
-				cacheResult(layoutSetPrototype);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the layout set prototypes.
-	 *
-	 * @return the layout set prototypes
-	 */
-	@Override
-	public List<LayoutSetPrototype> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the layout set prototypes.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetPrototypeModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set prototypes
-	 * @param end the upper bound of the range of layout set prototypes (not inclusive)
-	 * @return the range of layout set prototypes
-	 */
-	@Override
-	public List<LayoutSetPrototype> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the layout set prototypes.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetPrototypeModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set prototypes
-	 * @param end the upper bound of the range of layout set prototypes (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of layout set prototypes
-	 */
-	@Override
-	public List<LayoutSetPrototype> findAll(
-		int start, int end,
-		OrderByComparator<LayoutSetPrototype> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the layout set prototypes.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetPrototypeModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set prototypes
-	 * @param end the upper bound of the range of layout set prototypes (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of layout set prototypes
-	 */
-	@Override
-	public List<LayoutSetPrototype> findAll(
-		int start, int end,
-		OrderByComparator<LayoutSetPrototype> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					LayoutSetPrototype.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<LayoutSetPrototype> list = null;
-
-			if (useFinderCache) {
-				list = (List<LayoutSetPrototype>)FinderCacheUtil.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_LAYOUTSETPROTOTYPE);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_LAYOUTSETPROTOTYPE;
-
-					sql = sql.concat(LayoutSetPrototypeModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<LayoutSetPrototype>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						FinderCacheUtil.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the layout set prototypes from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (LayoutSetPrototype layoutSetPrototype : findAll()) {
-			remove(layoutSetPrototype);
-		}
-	}
-
-	/**
-	 * Returns the number of layout set prototypes.
-	 *
-	 * @return the number of layout set prototypes
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					LayoutSetPrototype.class)) {
-
-			Long count = (Long)FinderCacheUtil.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(
-						_SQL_COUNT_LAYOUTSETPROTOTYPE);
-
-					count = (Long)query.uniqueResult();
-
-					FinderCacheUtil.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -2483,21 +1947,6 @@ public class LayoutSetPrototypePersistenceImpl
 	 * Initializes the layout set prototype persistence.
 	 */
 	public void afterPropertiesSet() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -2508,20 +1957,20 @@ public class LayoutSetPrototypePersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_LAYOUTSETPROTOTYPE_WHERE,
 			_SQL_COUNT_LAYOUTSETPROTOTYPE_WHERE,
-			LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"layoutSetPrototype.", "uuid", FinderColumn.Type.STRING, "=",
 				true, true, LayoutSetPrototype::getUuid));
@@ -2538,12 +1987,12 @@ public class LayoutSetPrototypePersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -2551,11 +2000,11 @@ public class LayoutSetPrototypePersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_LAYOUTSETPROTOTYPE_WHERE,
 				_SQL_COUNT_LAYOUTSETPROTOTYPE_WHERE,
-				LayoutSetPrototypeModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"layoutSetPrototype.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, LayoutSetPrototype::getUuid),
+					"=", true, true, LayoutSetPrototype::getUuid),
 				new FinderColumn<>(
 					"layoutSetPrototype.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, LayoutSetPrototype::getCompanyId));
@@ -2585,8 +2034,8 @@ public class LayoutSetPrototypePersistenceImpl
 				_finderPathCountByCompanyId,
 				_SQL_SELECT_LAYOUTSETPROTOTYPE_WHERE,
 				_SQL_COUNT_LAYOUTSETPROTOTYPE_WHERE,
-				LayoutSetPrototypeModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"layoutSetPrototype.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, LayoutSetPrototype::getCompanyId));
@@ -2615,10 +2064,10 @@ public class LayoutSetPrototypePersistenceImpl
 			_finderPathWithoutPaginationFindByC_A, _finderPathCountByC_A,
 			_SQL_SELECT_LAYOUTSETPROTOTYPE_WHERE,
 			_SQL_COUNT_LAYOUTSETPROTOTYPE_WHERE,
-			LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			LayoutSetPrototypeModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"layoutSetPrototype.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, LayoutSetPrototype::getCompanyId),
+				true, true, LayoutSetPrototype::getCompanyId),
 			new FinderColumn<>(
 				"layoutSetPrototype.", "active", FinderColumn.Type.BOOLEAN, "=",
 				true, true, LayoutSetPrototype::isActive));
@@ -2632,14 +2081,14 @@ public class LayoutSetPrototypePersistenceImpl
 		EntityCacheUtil.removeCache(LayoutSetPrototypeImpl.class.getName());
 	}
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		LayoutSetPrototypeModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_LAYOUTSETPROTOTYPE =
 		"SELECT layoutSetPrototype FROM LayoutSetPrototype layoutSetPrototype";
 
 	private static final String _SQL_SELECT_LAYOUTSETPROTOTYPE_WHERE =
 		"SELECT layoutSetPrototype FROM LayoutSetPrototype layoutSetPrototype WHERE ";
-
-	private static final String _SQL_COUNT_LAYOUTSETPROTOTYPE =
-		"SELECT COUNT(layoutSetPrototype) FROM LayoutSetPrototype layoutSetPrototype";
 
 	private static final String _SQL_COUNT_LAYOUTSETPROTOTYPE_WHERE =
 		"SELECT COUNT(layoutSetPrototype) FROM LayoutSetPrototype layoutSetPrototype WHERE ";
@@ -2665,12 +2114,7 @@ public class LayoutSetPrototypePersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "LayoutSetPrototype";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "layoutSetPrototype.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "LayoutSetPrototype.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutSetPrototype exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutSetPrototype exists with the key {";
@@ -2687,4 +2131,4 @@ public class LayoutSetPrototypePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:2143067281
+// LIFERAY-SERVICE-BUILDER-HASH:989803398

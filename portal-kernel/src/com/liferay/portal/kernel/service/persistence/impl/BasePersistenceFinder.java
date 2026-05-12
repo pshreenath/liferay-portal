@@ -14,40 +14,40 @@ import com.liferay.portal.kernel.model.BaseModel;
  */
 public abstract class BasePersistenceFinder<T extends BaseModel<T>> {
 
-	@SafeVarargs
-	protected BasePersistenceFinder(
-		BasePersistenceImpl<T> basePersistenceImpl, String sqlSelectWhere,
-		FinderColumn<T>... finderColumns) {
-
-		this.basePersistenceImpl = basePersistenceImpl;
-		this.sqlSelectWhere = sqlSelectWhere;
-		this.finderColumns = finderColumns;
-	}
-
 	public String buildNoSuchKeyMessage(String prefix, Object[] values) {
 		StringBundler sb = new StringBundler((finderColumns.length * 3) + 1);
 
 		sb.append(prefix);
 
 		for (int i = 0; i < finderColumns.length; i++) {
-			if (i > 0) {
-				sb.append(", ");
-			}
-
 			sb.append(finderColumns[i].getKeyFragment());
 			sb.append(values[i]);
+			sb.append(", ");
 		}
 
-		sb.append("}");
+		sb.setStringAt("}", sb.index() - 1);
 
 		return sb.toString();
 	}
 
+	@SafeVarargs
+	protected BasePersistenceFinder(
+		BasePersistenceImpl<T, ?> basePersistenceImpl, String sqlSelectWhere,
+		String where, FinderColumn<T>... finderColumns) {
+
+		if (finderColumns.length == 0) {
+			throw new IllegalArgumentException("Missing finder columns");
+		}
+
+		this.basePersistenceImpl = basePersistenceImpl;
+		this.sqlSelectWhere = sqlSelectWhere;
+		this.where = where;
+		this.finderColumns = finderColumns;
+	}
+
 	protected void bindQueryParams(QueryPos queryPos, Object[] values) {
 		for (int i = 0; i < finderColumns.length; i++) {
-			if (finderColumns[i].shouldBind(values[i])) {
-				queryPos.add(values[i]);
-			}
+			finderColumns[i].bindValue(queryPos, values[i]);
 		}
 	}
 
@@ -62,12 +62,26 @@ public abstract class BasePersistenceFinder<T extends BaseModel<T>> {
 	}
 
 	protected String buildSQLWhere(String sqlWhere, Object[] values) {
-		StringBundler sb = new StringBundler(finderColumns.length + 1);
+		StringBundler sb = new StringBundler((finderColumns.length * 2) + 2);
 
 		sb.append(sqlWhere);
 
 		for (int i = 0; i < finderColumns.length; i++) {
-			sb.append(finderColumns[i].getSqlFragment(values[i]));
+			String fragment = finderColumns[i].getSqlFragment(values[i]);
+
+			if (fragment.isEmpty()) {
+				continue;
+			}
+
+			sb.append(fragment);
+			sb.append(" AND ");
+		}
+
+		if ((where != null) && !where.isEmpty()) {
+			sb.append(where);
+		}
+		else if (sb.index() > 1) {
+			sb.setIndex(sb.index() - 1);
 		}
 
 		return sb.toString();
@@ -89,8 +103,9 @@ public abstract class BasePersistenceFinder<T extends BaseModel<T>> {
 		}
 	}
 
-	protected final BasePersistenceImpl<T> basePersistenceImpl;
+	protected final BasePersistenceImpl<T, ?> basePersistenceImpl;
 	protected final FinderColumn<T>[] finderColumns;
 	protected final String sqlSelectWhere;
+	protected final String where;
 
 }

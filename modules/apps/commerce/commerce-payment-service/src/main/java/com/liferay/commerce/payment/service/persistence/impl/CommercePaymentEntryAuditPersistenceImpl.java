@@ -18,7 +18,6 @@ import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -33,10 +32,7 @@ import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 
 import java.io.Serializable;
@@ -46,7 +42,6 @@ import java.lang.reflect.InvocationHandler;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -67,7 +62,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommercePaymentEntryAuditPersistence.class)
 public class CommercePaymentEntryAuditPersistenceImpl
-	extends BasePersistenceImpl<CommercePaymentEntryAudit>
+	extends BasePersistenceImpl
+		<CommercePaymentEntryAudit, NoSuchPaymentEntryAuditException>
 	implements CommercePaymentEntryAuditPersistence {
 
 	/*
@@ -84,9 +80,6 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByCommercePaymentEntryId;
 	private FinderPath _finderPathWithoutPaginationFindByCommercePaymentEntryId;
 	private FinderPath _finderPathCountByCommercePaymentEntryId;
@@ -315,7 +308,7 @@ public class CommercePaymentEntryAuditPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -466,103 +459,6 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	}
 
 	/**
-	 * Caches the commerce payment entry audit in the entity cache if it is enabled.
-	 *
-	 * @param commercePaymentEntryAudit the commerce payment entry audit
-	 */
-	@Override
-	public void cacheResult(
-		CommercePaymentEntryAudit commercePaymentEntryAudit) {
-
-		entityCache.putResult(
-			CommercePaymentEntryAuditImpl.class,
-			commercePaymentEntryAudit.getPrimaryKey(),
-			commercePaymentEntryAudit);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the commerce payment entry audits in the entity cache if it is enabled.
-	 *
-	 * @param commercePaymentEntryAudits the commerce payment entry audits
-	 */
-	@Override
-	public void cacheResult(
-		List<CommercePaymentEntryAudit> commercePaymentEntryAudits) {
-
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (commercePaymentEntryAudits.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (CommercePaymentEntryAudit commercePaymentEntryAudit :
-				commercePaymentEntryAudits) {
-
-			if (entityCache.getResult(
-					CommercePaymentEntryAuditImpl.class,
-					commercePaymentEntryAudit.getPrimaryKey()) == null) {
-
-				cacheResult(commercePaymentEntryAudit);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all commerce payment entry audits.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CommercePaymentEntryAuditImpl.class);
-
-		finderCache.clearCache(CommercePaymentEntryAuditImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce payment entry audit.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		CommercePaymentEntryAudit commercePaymentEntryAudit) {
-
-		entityCache.removeResult(
-			CommercePaymentEntryAuditImpl.class, commercePaymentEntryAudit);
-	}
-
-	@Override
-	public void clearCache(
-		List<CommercePaymentEntryAudit> commercePaymentEntryAudits) {
-
-		for (CommercePaymentEntryAudit commercePaymentEntryAudit :
-				commercePaymentEntryAudits) {
-
-			entityCache.removeResult(
-				CommercePaymentEntryAuditImpl.class, commercePaymentEntryAudit);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CommercePaymentEntryAuditImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CommercePaymentEntryAuditImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new commerce payment entry audit with the primary key. Does not add the commerce payment entry audit to the database.
 	 *
 	 * @param commercePaymentEntryAuditId the primary key for the new commerce payment entry audit
@@ -594,48 +490,6 @@ public class CommercePaymentEntryAuditPersistenceImpl
 		throws NoSuchPaymentEntryAuditException {
 
 		return remove((Serializable)commercePaymentEntryAuditId);
-	}
-
-	/**
-	 * Removes the commerce payment entry audit with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce payment entry audit
-	 * @return the commerce payment entry audit that was removed
-	 * @throws NoSuchPaymentEntryAuditException if a commerce payment entry audit with the primary key could not be found
-	 */
-	@Override
-	public CommercePaymentEntryAudit remove(Serializable primaryKey)
-		throws NoSuchPaymentEntryAuditException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommercePaymentEntryAudit commercePaymentEntryAudit =
-				(CommercePaymentEntryAudit)session.get(
-					CommercePaymentEntryAuditImpl.class, primaryKey);
-
-			if (commercePaymentEntryAudit == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPaymentEntryAuditException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commercePaymentEntryAudit);
-		}
-		catch (NoSuchPaymentEntryAuditException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -746,41 +600,13 @@ public class CommercePaymentEntryAuditPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			CommercePaymentEntryAuditImpl.class,
-			commercePaymentEntryAuditModelImpl, false, true);
+		cacheUniqueFindersResult(commercePaymentEntryAudit, false);
 
 		if (isNew) {
 			commercePaymentEntryAudit.setNew(false);
 		}
 
 		commercePaymentEntryAudit.resetOriginalValues();
-
-		return commercePaymentEntryAudit;
-	}
-
-	/**
-	 * Returns the commerce payment entry audit with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce payment entry audit
-	 * @return the commerce payment entry audit
-	 * @throws NoSuchPaymentEntryAuditException if a commerce payment entry audit with the primary key could not be found
-	 */
-	@Override
-	public CommercePaymentEntryAudit findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchPaymentEntryAuditException {
-
-		CommercePaymentEntryAudit commercePaymentEntryAudit = fetchByPrimaryKey(
-			primaryKey);
-
-		if (commercePaymentEntryAudit == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPaymentEntryAuditException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return commercePaymentEntryAudit;
 	}
@@ -813,189 +639,6 @@ public class CommercePaymentEntryAuditPersistenceImpl
 		return fetchByPrimaryKey((Serializable)commercePaymentEntryAuditId);
 	}
 
-	/**
-	 * Returns all the commerce payment entry audits.
-	 *
-	 * @return the commerce payment entry audits
-	 */
-	@Override
-	public List<CommercePaymentEntryAudit> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the commerce payment entry audits.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentEntryAuditModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment entry audits
-	 * @param end the upper bound of the range of commerce payment entry audits (not inclusive)
-	 * @return the range of commerce payment entry audits
-	 */
-	@Override
-	public List<CommercePaymentEntryAudit> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce payment entry audits.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentEntryAuditModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment entry audits
-	 * @param end the upper bound of the range of commerce payment entry audits (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of commerce payment entry audits
-	 */
-	@Override
-	public List<CommercePaymentEntryAudit> findAll(
-		int start, int end,
-		OrderByComparator<CommercePaymentEntryAudit> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce payment entry audits.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommercePaymentEntryAuditModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce payment entry audits
-	 * @param end the upper bound of the range of commerce payment entry audits (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of commerce payment entry audits
-	 */
-	@Override
-	public List<CommercePaymentEntryAudit> findAll(
-		int start, int end,
-		OrderByComparator<CommercePaymentEntryAudit> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<CommercePaymentEntryAudit> list = null;
-
-		if (useFinderCache) {
-			list = (List<CommercePaymentEntryAudit>)finderCache.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_COMMERCEPAYMENTENTRYAUDIT);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_COMMERCEPAYMENTENTRYAUDIT;
-
-				sql = sql.concat(
-					CommercePaymentEntryAuditModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<CommercePaymentEntryAudit>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the commerce payment entry audits from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (CommercePaymentEntryAudit commercePaymentEntryAudit : findAll()) {
-			remove(commercePaymentEntryAudit);
-		}
-	}
-
-	/**
-	 * Returns the number of commerce payment entry audits.
-	 *
-	 * @return the number of commerce payment entry audits
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)finderCache.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(
-					_SQL_COUNT_COMMERCEPAYMENTENTRYAUDIT);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
-	}
-
 	@Override
 	protected EntityCache getEntityCache() {
 		return entityCache;
@@ -1021,21 +664,6 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByCommercePaymentEntryId = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION,
 			"findByCommercePaymentEntryId",
@@ -1066,7 +694,7 @@ public class CommercePaymentEntryAuditPersistenceImpl
 				_SQL_SELECT_COMMERCEPAYMENTENTRYAUDIT_WHERE,
 				_SQL_COUNT_COMMERCEPAYMENTENTRYAUDIT_WHERE,
 				CommercePaymentEntryAuditModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"commercePaymentEntryAudit.", "commercePaymentEntryId",
 					FinderColumn.Type.LONG, "=", true, true,
@@ -1114,14 +742,14 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		CommercePaymentEntryAuditModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_COMMERCEPAYMENTENTRYAUDIT =
 		"SELECT commercePaymentEntryAudit FROM CommercePaymentEntryAudit commercePaymentEntryAudit";
 
 	private static final String _SQL_SELECT_COMMERCEPAYMENTENTRYAUDIT_WHERE =
 		"SELECT commercePaymentEntryAudit FROM CommercePaymentEntryAudit commercePaymentEntryAudit WHERE ";
-
-	private static final String _SQL_COUNT_COMMERCEPAYMENTENTRYAUDIT =
-		"SELECT COUNT(commercePaymentEntryAudit) FROM CommercePaymentEntryAudit commercePaymentEntryAudit";
 
 	private static final String _SQL_COUNT_COMMERCEPAYMENTENTRYAUDIT_WHERE =
 		"SELECT COUNT(commercePaymentEntryAudit) FROM CommercePaymentEntryAudit commercePaymentEntryAudit WHERE ";
@@ -1151,14 +779,8 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	private static final String _FILTER_ENTITY_TABLE =
 		"CommercePaymentEntryAudit";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS =
-		"commercePaymentEntryAudit.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE =
 		"CommercePaymentEntryAudit.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommercePaymentEntryAudit exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommercePaymentEntryAudit exists with the key {";
@@ -1172,4 +794,4 @@ public class CommercePaymentEntryAuditPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-887283189
+// LIFERAY-SERVICE-BUILDER-HASH:-905684616

@@ -12,14 +12,12 @@ import com.liferay.announcements.kernel.service.persistence.AnnouncementsEntryPe
 import com.liferay.announcements.kernel.service.persistence.AnnouncementsEntryUtil;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.EntityCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -35,6 +33,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -42,8 +41,6 @@ import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -61,7 +58,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -78,7 +74,7 @@ import java.util.Set;
  * @generated
  */
 public class AnnouncementsEntryPersistenceImpl
-	extends BasePersistenceImpl<AnnouncementsEntry>
+	extends BasePersistenceImpl<AnnouncementsEntry, NoSuchEntryException>
 	implements AnnouncementsEntryPersistence {
 
 	/*
@@ -95,9 +91,6 @@ public class AnnouncementsEntryPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -328,7 +321,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -733,7 +726,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1126,7 +1119,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1486,7 +1479,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1864,7 +1857,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2274,7 +2267,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2696,7 +2689,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3139,7 +3132,7 @@ public class AnnouncementsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3341,100 +3334,6 @@ public class AnnouncementsEntryPersistenceImpl
 	}
 
 	/**
-	 * Caches the announcements entry in the entity cache if it is enabled.
-	 *
-	 * @param announcementsEntry the announcements entry
-	 */
-	@Override
-	public void cacheResult(AnnouncementsEntry announcementsEntry) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					announcementsEntry.getCtCollectionId())) {
-
-			EntityCacheUtil.putResult(
-				AnnouncementsEntryImpl.class,
-				announcementsEntry.getPrimaryKey(), announcementsEntry);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the announcements entries in the entity cache if it is enabled.
-	 *
-	 * @param announcementsEntries the announcements entries
-	 */
-	@Override
-	public void cacheResult(List<AnnouncementsEntry> announcementsEntries) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (announcementsEntries.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (AnnouncementsEntry announcementsEntry : announcementsEntries) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						announcementsEntry.getCtCollectionId())) {
-
-				if (EntityCacheUtil.getResult(
-						AnnouncementsEntryImpl.class,
-						announcementsEntry.getPrimaryKey()) == null) {
-
-					cacheResult(announcementsEntry);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all announcements entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-
-		FinderCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the announcements entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AnnouncementsEntry announcementsEntry) {
-		EntityCacheUtil.removeResult(
-			AnnouncementsEntryImpl.class, announcementsEntry);
-	}
-
-	@Override
-	public void clearCache(List<AnnouncementsEntry> announcementsEntries) {
-		for (AnnouncementsEntry announcementsEntry : announcementsEntries) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsEntryImpl.class, announcementsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsEntryImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new announcements entry with the primary key. Does not add the announcements entry to the database.
 	 *
 	 * @param entryId the primary key for the new announcements entry
@@ -3466,48 +3365,6 @@ public class AnnouncementsEntryPersistenceImpl
 	@Override
 	public AnnouncementsEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the announcements entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry that was removed
-	 * @throws NoSuchEntryException if a announcements entry with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AnnouncementsEntry announcementsEntry =
-				(AnnouncementsEntry)session.get(
-					AnnouncementsEntryImpl.class, primaryKey);
-
-			if (announcementsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(announcementsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3654,40 +3511,13 @@ public class AnnouncementsEntryPersistenceImpl
 			closeSession(session);
 		}
 
-		EntityCacheUtil.putResult(
-			AnnouncementsEntryImpl.class, announcementsEntryModelImpl, false,
-			true);
+		cacheUniqueFindersResult(announcementsEntry, false);
 
 		if (isNew) {
 			announcementsEntry.setNew(false);
 		}
 
 		announcementsEntry.resetOriginalValues();
-
-		return announcementsEntry;
-	}
-
-	/**
-	 * Returns the announcements entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry
-	 * @throws NoSuchEntryException if a announcements entry with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		AnnouncementsEntry announcementsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (announcementsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return announcementsEntry;
 	}
@@ -3706,53 +3536,9 @@ public class AnnouncementsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the announcements entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry, or <code>null</code> if a announcements entry with the primary key could not be found
-	 */
 	@Override
-	public AnnouncementsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AnnouncementsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AnnouncementsEntry announcementsEntry =
-			(AnnouncementsEntry)EntityCacheUtil.getResult(
-				AnnouncementsEntryImpl.class, primaryKey);
-
-		if (announcementsEntry != null) {
-			return announcementsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			announcementsEntry = (AnnouncementsEntry)session.get(
-				AnnouncementsEntryImpl.class, primaryKey);
-
-			if (announcementsEntry != null) {
-				cacheResult(announcementsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return announcementsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -3764,328 +3550,6 @@ public class AnnouncementsEntryPersistenceImpl
 	@Override
 	public AnnouncementsEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, AnnouncementsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AnnouncementsEntry.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AnnouncementsEntry> map =
-			new HashMap<Serializable, AnnouncementsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AnnouncementsEntry announcementsEntry = fetchByPrimaryKey(
-				primaryKey);
-
-			if (announcementsEntry != null) {
-				map.put(primaryKey, announcementsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AnnouncementsEntry.class, primaryKey)) {
-
-				AnnouncementsEntry announcementsEntry =
-					(AnnouncementsEntry)EntityCacheUtil.getResult(
-						AnnouncementsEntryImpl.class, primaryKey);
-
-				if (announcementsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, announcementsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AnnouncementsEntry announcementsEntry :
-					(List<AnnouncementsEntry>)query.list()) {
-
-				map.put(
-					announcementsEntry.getPrimaryKeyObj(), announcementsEntry);
-
-				cacheResult(announcementsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the announcements entries.
-	 *
-	 * @return the announcements entries
-	 */
-	@Override
-	public List<AnnouncementsEntry> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the announcements entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>AnnouncementsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of announcements entries
-	 * @param end the upper bound of the range of announcements entries (not inclusive)
-	 * @return the range of announcements entries
-	 */
-	@Override
-	public List<AnnouncementsEntry> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the announcements entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>AnnouncementsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of announcements entries
-	 * @param end the upper bound of the range of announcements entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of announcements entries
-	 */
-	@Override
-	public List<AnnouncementsEntry> findAll(
-		int start, int end,
-		OrderByComparator<AnnouncementsEntry> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the announcements entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>AnnouncementsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of announcements entries
-	 * @param end the upper bound of the range of announcements entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of announcements entries
-	 */
-	@Override
-	public List<AnnouncementsEntry> findAll(
-		int start, int end,
-		OrderByComparator<AnnouncementsEntry> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					AnnouncementsEntry.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<AnnouncementsEntry> list = null;
-
-			if (useFinderCache) {
-				list = (List<AnnouncementsEntry>)FinderCacheUtil.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_ANNOUNCEMENTSENTRY);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_ANNOUNCEMENTSENTRY;
-
-					sql = sql.concat(AnnouncementsEntryModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<AnnouncementsEntry>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						FinderCacheUtil.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the announcements entries from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (AnnouncementsEntry announcementsEntry : findAll()) {
-			remove(announcementsEntry);
-		}
-	}
-
-	/**
-	 * Returns the number of announcements entries.
-	 *
-	 * @return the number of announcements entries
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					AnnouncementsEntry.class)) {
-
-			Long count = (Long)FinderCacheUtil.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(
-						_SQL_COUNT_ANNOUNCEMENTSENTRY);
-
-					count = (Long)query.uniqueResult();
-
-					FinderCacheUtil.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -4184,21 +3648,6 @@ public class AnnouncementsEntryPersistenceImpl
 	 * Initializes the announcements entry persistence.
 	 */
 	public void afterPropertiesSet() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -4209,20 +3658,20 @@ public class AnnouncementsEntryPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 			_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"announcementsEntry.", "uuid", FinderColumn.Type.STRING, "=",
 				true, true, AnnouncementsEntry::getUuid));
@@ -4239,12 +3688,12 @@ public class AnnouncementsEntryPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -4252,11 +3701,11 @@ public class AnnouncementsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 				_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-				AnnouncementsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"announcementsEntry.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, AnnouncementsEntry::getUuid),
+					"=", true, true, AnnouncementsEntry::getUuid),
 				new FinderColumn<>(
 					"announcementsEntry.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, AnnouncementsEntry::getCompanyId));
@@ -4286,8 +3735,8 @@ public class AnnouncementsEntryPersistenceImpl
 				_finderPathCountByCompanyId,
 				_SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 				_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-				AnnouncementsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"announcementsEntry.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, AnnouncementsEntry::getCompanyId));
@@ -4315,8 +3764,8 @@ public class AnnouncementsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByUserId,
 				_finderPathCountByUserId, _SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 				_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-				AnnouncementsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"announcementsEntry.", "userId", FinderColumn.Type.LONG,
 					"=", true, true, AnnouncementsEntry::getUserId));
@@ -4345,10 +3794,10 @@ public class AnnouncementsEntryPersistenceImpl
 			_finderPathWithoutPaginationFindByC_C, _finderPathCountByC_C,
 			_SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 			_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"announcementsEntry.", "classNameId", FinderColumn.Type.LONG,
-				"=", true, false, AnnouncementsEntry::getClassNameId),
+				"=", true, true, AnnouncementsEntry::getClassNameId),
 			new FinderColumn<>(
 				"announcementsEntry.", "classPK", FinderColumn.Type.LONG, "=",
 				true, true, AnnouncementsEntry::getClassPK));
@@ -4381,13 +3830,13 @@ public class AnnouncementsEntryPersistenceImpl
 			_finderPathWithoutPaginationFindByC_C_C, _finderPathCountByC_C_C,
 			_SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 			_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"announcementsEntry.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, AnnouncementsEntry::getCompanyId),
+				true, true, AnnouncementsEntry::getCompanyId),
 			new FinderColumn<>(
 				"announcementsEntry.", "classNameId", FinderColumn.Type.LONG,
-				"=", true, false, AnnouncementsEntry::getClassNameId),
+				"=", true, true, AnnouncementsEntry::getClassNameId),
 			new FinderColumn<>(
 				"announcementsEntry.", "classPK", FinderColumn.Type.LONG, "=",
 				true, true, AnnouncementsEntry::getClassPK));
@@ -4422,13 +3871,13 @@ public class AnnouncementsEntryPersistenceImpl
 			_finderPathWithoutPaginationFindByC_C_A, _finderPathCountByC_C_A,
 			_SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 			_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"announcementsEntry.", "classNameId", FinderColumn.Type.LONG,
-				"=", true, false, AnnouncementsEntry::getClassNameId),
+				"=", true, true, AnnouncementsEntry::getClassNameId),
 			new FinderColumn<>(
 				"announcementsEntry.", "classPK", FinderColumn.Type.LONG, "=",
-				true, false, AnnouncementsEntry::getClassPK),
+				true, true, AnnouncementsEntry::getClassPK),
 			new FinderColumn<>(
 				"announcementsEntry.", "alert", FinderColumn.Type.BOOLEAN, "=",
 				true, true, AnnouncementsEntry::isAlert));
@@ -4468,18 +3917,18 @@ public class AnnouncementsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByC_C_C_A,
 				_finderPathCountByC_C_C_A, _SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE,
 				_SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE,
-				AnnouncementsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				AnnouncementsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"announcementsEntry.", "companyId", FinderColumn.Type.LONG,
-					"=", true, false, AnnouncementsEntry::getCompanyId),
+					"=", true, true, AnnouncementsEntry::getCompanyId),
 				new FinderColumn<>(
 					"announcementsEntry.", "classNameId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					AnnouncementsEntry::getClassNameId),
 				new FinderColumn<>(
 					"announcementsEntry.", "classPK", FinderColumn.Type.LONG,
-					"=", true, false, AnnouncementsEntry::getClassPK),
+					"=", true, true, AnnouncementsEntry::getClassPK),
 				new FinderColumn<>(
 					"announcementsEntry.", "alert", FinderColumn.Type.BOOLEAN,
 					"=", true, true, AnnouncementsEntry::isAlert));
@@ -4493,14 +3942,14 @@ public class AnnouncementsEntryPersistenceImpl
 		EntityCacheUtil.removeCache(AnnouncementsEntryImpl.class.getName());
 	}
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		AnnouncementsEntryModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_ANNOUNCEMENTSENTRY =
 		"SELECT announcementsEntry FROM AnnouncementsEntry announcementsEntry";
 
 	private static final String _SQL_SELECT_ANNOUNCEMENTSENTRY_WHERE =
 		"SELECT announcementsEntry FROM AnnouncementsEntry announcementsEntry WHERE ";
-
-	private static final String _SQL_COUNT_ANNOUNCEMENTSENTRY =
-		"SELECT COUNT(announcementsEntry) FROM AnnouncementsEntry announcementsEntry";
 
 	private static final String _SQL_COUNT_ANNOUNCEMENTSENTRY_WHERE =
 		"SELECT COUNT(announcementsEntry) FROM AnnouncementsEntry announcementsEntry WHERE ";
@@ -4526,12 +3975,7 @@ public class AnnouncementsEntryPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "AnnouncementsEntry";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "announcementsEntry.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "AnnouncementsEntry.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AnnouncementsEntry exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AnnouncementsEntry exists with the key {";
@@ -4548,4 +3992,4 @@ public class AnnouncementsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:2058330939
+// LIFERAY-SERVICE-BUILDER-HASH:551250318

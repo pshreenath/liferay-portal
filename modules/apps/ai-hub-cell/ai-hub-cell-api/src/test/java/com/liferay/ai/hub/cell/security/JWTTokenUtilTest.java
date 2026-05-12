@@ -5,9 +5,11 @@
 
 package com.liferay.ai.hub.cell.security;
 
+import com.liferay.ai.hub.cell.configuration.AIHubCellConfiguration;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProviderUtil;
 import com.liferay.portal.kernel.security.SecureRandomUtil;
-import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
+import com.liferay.portal.kernel.util.Base64;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LogEntry;
 import com.liferay.portal.test.log.LoggerTestUtil;
@@ -23,6 +25,9 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+
 /**
  * @author Rafael Praxedes
  */
@@ -34,58 +39,102 @@ public class JWTTokenUtilTest {
 
 	@Test
 	public void testGenerateToken() throws Exception {
-		String token = JWTTokenUtil.generateToken(
-			TimeUnit.MINUTES.toMillis(1), _ISSUER, _USER_ID);
+		try (MockedStatic<ConfigurationProviderUtil>
+				configurationProviderUtilMockedStatic =
+					_mockConfigurationProviderUtil()) {
 
-		Assert.assertNotNull(token);
-		Assert.assertFalse(token.isEmpty());
+			String token = JWTTokenUtil.generateToken(
+				TimeUnit.MINUTES.toMillis(1), _ISSUER, _USER_ID);
 
-		SignedJWT signedJWT = SignedJWT.parse(token);
+			Assert.assertFalse(token.isEmpty());
 
-		JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+			SignedJWT signedJWT = SignedJWT.parse(token);
 
-		Assert.assertEquals(_ISSUER, jwtClaimsSet.getIssuer());
-		Assert.assertEquals(
-			String.valueOf(_USER_ID), jwtClaimsSet.getSubject());
+			JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+
+			Assert.assertEquals(_ISSUER, jwtClaimsSet.getIssuer());
+			Assert.assertEquals(
+				String.valueOf(_USER_ID), jwtClaimsSet.getSubject());
+		}
 	}
 
 	@Test
 	public void testGetUserId() throws Exception {
-		String token = JWTTokenUtil.generateToken(
-			TimeUnit.MINUTES.toMillis(1), _ISSUER, _USER_ID);
+		String token = null;
 
-		Assert.assertEquals(_USER_ID, JWTTokenUtil.getUserId(token));
+		try (MockedStatic<ConfigurationProviderUtil>
+				configurationProviderUtilMockedStatic =
+					_mockConfigurationProviderUtil()) {
 
-		byte[] secret = new byte[64];
+			token = JWTTokenUtil.generateToken(
+				TimeUnit.MINUTES.toMillis(1), _ISSUER, _USER_ID);
 
-		for (int i = 0; i < secret.length; i++) {
-			secret[i] = SecureRandomUtil.nextByte();
+			Assert.assertEquals(
+				_USER_ID, JWTTokenUtil.getUserId(_ISSUER, token));
+
+			_testGetUserId(
+				"Invalid JWT issuer", RandomTestUtil.randomString(),
+				JWTTokenUtil.generateToken(
+					TimeUnit.MINUTES.toMillis(1), _ISSUER, _USER_ID));
+			_testGetUserId(
+				"Invalid JWT signature", _ISSUER,
+				token.substring(0, token.length() - 5) + "abcde");
+			_testGetUserId(
+				"The JWT token is expired", _ISSUER,
+				JWTTokenUtil.generateToken(0, _ISSUER, _USER_ID));
+			_testGetUserId(
+				"Unable to parse and verify the JWT token", _ISSUER,
+				RandomTestUtil.randomString());
 		}
 
-		try (AutoCloseable autoCloseable =
-				ReflectionTestUtil.setFieldValueWithAutoCloseable(
-					JWTTokenUtil.class, "_SECRET", secret)) {
+		try (MockedStatic<ConfigurationProviderUtil>
+				configurationProviderUtilMockedStatic =
+					_mockConfigurationProviderUtil()) {
 
-			_testGetUserId("Invalid JWT signature", token);
+			_testGetUserId("Invalid JWT signature", _ISSUER, token);
 		}
-
-		_testGetUserId(
-			"Invalid JWT signature",
-			token.substring(0, token.length() - 5) + "abcde");
-		_testGetUserId(
-			"The JWT token is expired",
-			JWTTokenUtil.generateToken(0, _ISSUER, _USER_ID));
-		_testGetUserId(
-			"Unable to parse and verify the JWT token",
-			RandomTestUtil.randomString());
 	}
 
-	private void _testGetUserId(String expectedLogMessage, String token) {
+	private MockedStatic<ConfigurationProviderUtil>
+		_mockConfigurationProviderUtil() {
+
+		MockedStatic<ConfigurationProviderUtil>
+			configurationProviderUtilMockedStatic = Mockito.mockStatic(
+				ConfigurationProviderUtil.class);
+
+		AIHubCellConfiguration aiHubCellConfiguration = Mockito.mock(
+			AIHubCellConfiguration.class);
+
+		byte[] secretBytes = new byte[64];
+
+		for (int i = 0; i < secretBytes.length; i++) {
+			secretBytes[i] = SecureRandomUtil.nextByte();
+		}
+
+		Mockito.when(
+			aiHubCellConfiguration.secret()
+		).thenReturn(
+			Base64.encode(secretBytes)
+		);
+
+		configurationProviderUtilMockedStatic.when(
+			() -> ConfigurationProviderUtil.getCompanyConfiguration(
+				Mockito.eq(AIHubCellConfiguration.class), Mockito.anyLong())
+		).thenReturn(
+			aiHubCellConfiguration
+		);
+
+		return configurationProviderUtilMockedStatic;
+	}
+
+	private void _testGetUserId(
+		String expectedLogMessage, String issuer, String token) {
+
 		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
 				"com.liferay.ai.hub.cell.security.JWTTokenUtil",
 				LoggerTestUtil.DEBUG)) {
 
-			JWTTokenUtil.getUserId(token);
+			JWTTokenUtil.getUserId(issuer, token);
 
 			List<LogEntry> logEntries = logCapture.getLogEntries();
 

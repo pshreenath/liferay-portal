@@ -14,14 +14,11 @@ import com.liferay.fragment.service.persistence.FragmentEntryVersionPersistence;
 import com.liferay.fragment.service.persistence.FragmentEntryVersionUtil;
 import com.liferay.fragment.service.persistence.impl.constants.FragmentPersistenceConstants;
 import com.liferay.petra.lang.SafeCloseable;
-import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.dao.orm.SessionFactory;
@@ -43,8 +40,6 @@ import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinde
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -59,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -84,7 +78,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = FragmentEntryVersionPersistence.class)
 public class FragmentEntryVersionPersistenceImpl
-	extends BasePersistenceImpl<FragmentEntryVersion>
+	extends BasePersistenceImpl
+		<FragmentEntryVersion, NoSuchEntryVersionException>
 	implements FragmentEntryVersionPersistence {
 
 	/*
@@ -101,9 +96,6 @@ public class FragmentEntryVersionPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByFragmentEntryId;
 	private FinderPath _finderPathWithoutPaginationFindByFragmentEntryId;
 	private FinderPath _finderPathCountByFragmentEntryId;
@@ -5012,168 +5004,6 @@ public class FragmentEntryVersionPersistenceImpl
 	}
 
 	/**
-	 * Caches the fragment entry version in the entity cache if it is enabled.
-	 *
-	 * @param fragmentEntryVersion the fragment entry version
-	 */
-	@Override
-	public void cacheResult(FragmentEntryVersion fragmentEntryVersion) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					fragmentEntryVersion.getCtCollectionId())) {
-
-			entityCache.putResult(
-				FragmentEntryVersionImpl.class,
-				fragmentEntryVersion.getPrimaryKey(), fragmentEntryVersion);
-
-			finderCache.putResult(
-				_finderPathFetchByFragmentEntryId_Version,
-				new Object[] {
-					fragmentEntryVersion.getFragmentEntryId(),
-					fragmentEntryVersion.getVersion()
-				},
-				fragmentEntryVersion);
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G_Version,
-				new Object[] {
-					fragmentEntryVersion.getUuid(),
-					fragmentEntryVersion.getGroupId(),
-					fragmentEntryVersion.getVersion()
-				},
-				fragmentEntryVersion);
-
-			finderCache.putResult(
-				_finderPathFetchByG_FEK_Version,
-				new Object[] {
-					fragmentEntryVersion.getGroupId(),
-					fragmentEntryVersion.getFragmentEntryKey(),
-					fragmentEntryVersion.getVersion()
-				},
-				fragmentEntryVersion);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the fragment entry versions in the entity cache if it is enabled.
-	 *
-	 * @param fragmentEntryVersions the fragment entry versions
-	 */
-	@Override
-	public void cacheResult(List<FragmentEntryVersion> fragmentEntryVersions) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (fragmentEntryVersions.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (FragmentEntryVersion fragmentEntryVersion :
-				fragmentEntryVersions) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						fragmentEntryVersion.getCtCollectionId())) {
-
-				if (entityCache.getResult(
-						FragmentEntryVersionImpl.class,
-						fragmentEntryVersion.getPrimaryKey()) == null) {
-
-					cacheResult(fragmentEntryVersion);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all fragment entry versions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(FragmentEntryVersionImpl.class);
-
-		finderCache.clearCache(FragmentEntryVersionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the fragment entry version.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(FragmentEntryVersion fragmentEntryVersion) {
-		entityCache.removeResult(
-			FragmentEntryVersionImpl.class, fragmentEntryVersion);
-	}
-
-	@Override
-	public void clearCache(List<FragmentEntryVersion> fragmentEntryVersions) {
-		for (FragmentEntryVersion fragmentEntryVersion :
-				fragmentEntryVersions) {
-
-			entityCache.removeResult(
-				FragmentEntryVersionImpl.class, fragmentEntryVersion);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(FragmentEntryVersionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				FragmentEntryVersionImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		FragmentEntryVersionModelImpl fragmentEntryVersionModelImpl) {
-
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					fragmentEntryVersionModelImpl.getCtCollectionId())) {
-
-			Object[] args = new Object[] {
-				fragmentEntryVersionModelImpl.getFragmentEntryId(),
-				fragmentEntryVersionModelImpl.getVersion()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByFragmentEntryId_Version, args,
-				fragmentEntryVersionModelImpl);
-
-			args = new Object[] {
-				fragmentEntryVersionModelImpl.getUuid(),
-				fragmentEntryVersionModelImpl.getGroupId(),
-				fragmentEntryVersionModelImpl.getVersion()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G_Version, args,
-				fragmentEntryVersionModelImpl);
-
-			args = new Object[] {
-				fragmentEntryVersionModelImpl.getGroupId(),
-				fragmentEntryVersionModelImpl.getFragmentEntryKey(),
-				fragmentEntryVersionModelImpl.getVersion()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByG_FEK_Version, args,
-				fragmentEntryVersionModelImpl);
-		}
-	}
-
-	/**
 	 * Creates a new fragment entry version with the primary key. Does not add the fragment entry version to the database.
 	 *
 	 * @param fragmentEntryVersionId the primary key for the new fragment entry version
@@ -5204,48 +5034,6 @@ public class FragmentEntryVersionPersistenceImpl
 		throws NoSuchEntryVersionException {
 
 		return remove((Serializable)fragmentEntryVersionId);
-	}
-
-	/**
-	 * Removes the fragment entry version with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the fragment entry version
-	 * @return the fragment entry version that was removed
-	 * @throws NoSuchEntryVersionException if a fragment entry version with the primary key could not be found
-	 */
-	@Override
-	public FragmentEntryVersion remove(Serializable primaryKey)
-		throws NoSuchEntryVersionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			FragmentEntryVersion fragmentEntryVersion =
-				(FragmentEntryVersion)session.get(
-					FragmentEntryVersionImpl.class, primaryKey);
-
-			if (fragmentEntryVersion == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryVersionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(fragmentEntryVersion);
-		}
-		catch (NoSuchEntryVersionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -5400,43 +5188,13 @@ public class FragmentEntryVersionPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			FragmentEntryVersionImpl.class, fragmentEntryVersionModelImpl,
-			false, true);
-
-		cacheUniqueFindersCache(fragmentEntryVersionModelImpl);
+		cacheUniqueFindersResult(fragmentEntryVersion, false);
 
 		if (isNew) {
 			fragmentEntryVersion.setNew(false);
 		}
 
 		fragmentEntryVersion.resetOriginalValues();
-
-		return fragmentEntryVersion;
-	}
-
-	/**
-	 * Returns the fragment entry version with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the fragment entry version
-	 * @return the fragment entry version
-	 * @throws NoSuchEntryVersionException if a fragment entry version with the primary key could not be found
-	 */
-	@Override
-	public FragmentEntryVersion findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryVersionException {
-
-		FragmentEntryVersion fragmentEntryVersion = fetchByPrimaryKey(
-			primaryKey);
-
-		if (fragmentEntryVersion == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryVersionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return fragmentEntryVersion;
 	}
@@ -5455,53 +5213,9 @@ public class FragmentEntryVersionPersistenceImpl
 		return findByPrimaryKey((Serializable)fragmentEntryVersionId);
 	}
 
-	/**
-	 * Returns the fragment entry version with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the fragment entry version
-	 * @return the fragment entry version, or <code>null</code> if a fragment entry version with the primary key could not be found
-	 */
 	@Override
-	public FragmentEntryVersion fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				FragmentEntryVersion.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		FragmentEntryVersion fragmentEntryVersion =
-			(FragmentEntryVersion)entityCache.getResult(
-				FragmentEntryVersionImpl.class, primaryKey);
-
-		if (fragmentEntryVersion != null) {
-			return fragmentEntryVersion;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			fragmentEntryVersion = (FragmentEntryVersion)session.get(
-				FragmentEntryVersionImpl.class, primaryKey);
-
-			if (fragmentEntryVersion != null) {
-				cacheResult(fragmentEntryVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return fragmentEntryVersion;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -5513,328 +5227,6 @@ public class FragmentEntryVersionPersistenceImpl
 	@Override
 	public FragmentEntryVersion fetchByPrimaryKey(long fragmentEntryVersionId) {
 		return fetchByPrimaryKey((Serializable)fragmentEntryVersionId);
-	}
-
-	@Override
-	public Map<Serializable, FragmentEntryVersion> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(FragmentEntryVersion.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, FragmentEntryVersion> map =
-			new HashMap<Serializable, FragmentEntryVersion>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			FragmentEntryVersion fragmentEntryVersion = fetchByPrimaryKey(
-				primaryKey);
-
-			if (fragmentEntryVersion != null) {
-				map.put(primaryKey, fragmentEntryVersion);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						FragmentEntryVersion.class, primaryKey)) {
-
-				FragmentEntryVersion fragmentEntryVersion =
-					(FragmentEntryVersion)entityCache.getResult(
-						FragmentEntryVersionImpl.class, primaryKey);
-
-				if (fragmentEntryVersion == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, fragmentEntryVersion);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (FragmentEntryVersion fragmentEntryVersion :
-					(List<FragmentEntryVersion>)query.list()) {
-
-				map.put(
-					fragmentEntryVersion.getPrimaryKeyObj(),
-					fragmentEntryVersion);
-
-				cacheResult(fragmentEntryVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the fragment entry versions.
-	 *
-	 * @return the fragment entry versions
-	 */
-	@Override
-	public List<FragmentEntryVersion> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the fragment entry versions.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>FragmentEntryVersionModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of fragment entry versions
-	 * @param end the upper bound of the range of fragment entry versions (not inclusive)
-	 * @return the range of fragment entry versions
-	 */
-	@Override
-	public List<FragmentEntryVersion> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the fragment entry versions.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>FragmentEntryVersionModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of fragment entry versions
-	 * @param end the upper bound of the range of fragment entry versions (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of fragment entry versions
-	 */
-	@Override
-	public List<FragmentEntryVersion> findAll(
-		int start, int end,
-		OrderByComparator<FragmentEntryVersion> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the fragment entry versions.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>FragmentEntryVersionModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of fragment entry versions
-	 * @param end the upper bound of the range of fragment entry versions (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of fragment entry versions
-	 */
-	@Override
-	public List<FragmentEntryVersion> findAll(
-		int start, int end,
-		OrderByComparator<FragmentEntryVersion> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					FragmentEntryVersion.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<FragmentEntryVersion> list = null;
-
-			if (useFinderCache) {
-				list = (List<FragmentEntryVersion>)finderCache.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_FRAGMENTENTRYVERSION);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_FRAGMENTENTRYVERSION;
-
-					sql = sql.concat(
-						FragmentEntryVersionModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<FragmentEntryVersion>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the fragment entry versions from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (FragmentEntryVersion fragmentEntryVersion : findAll()) {
-			remove(fragmentEntryVersion);
-		}
-	}
-
-	/**
-	 * Returns the number of fragment entry versions.
-	 *
-	 * @return the number of fragment entry versions
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					FragmentEntryVersion.class)) {
-
-			Long count = (Long)finderCache.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(
-						_SQL_COUNT_FRAGMENTENTRYVERSION);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -5957,21 +5349,6 @@ public class FragmentEntryVersionPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByFragmentEntryId = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByFragmentEntryId",
 			new String[] {
@@ -5998,24 +5375,26 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentEntryId",
 					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentEntryId));
 
-		_finderPathFetchByFragmentEntryId_Version = new FinderPath(
+		_finderPathFetchByFragmentEntryId_Version = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByFragmentEntryId_Version",
 			new String[] {Long.class.getName(), Integer.class.getName()},
-			new String[] {"fragmentEntryId", "version"}, true);
+			new String[] {"fragmentEntryId", "version"}, 0, 0, false,
+			FragmentEntryVersion::getFragmentEntryId,
+			FragmentEntryVersion::getVersion);
 
 		_uniquePersistenceFinderByFragmentEntryId_Version =
 			new UniquePersistenceFinder<>(
 				this, _finderPathFetchByFragmentEntryId_Version,
-				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
+				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentEntryId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentEntryId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -6032,20 +5411,21 @@ public class FragmentEntryVersionPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 			_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
-			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+			"",
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING, "=",
 				true, true, FragmentEntryVersion::getUuid));
@@ -6062,12 +5442,12 @@ public class FragmentEntryVersionPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_Version = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_Version",
 			new String[] {String.class.getName(), Integer.class.getName()},
-			new String[] {"uuid_", "version"}, true);
+			new String[] {"uuid_", "version"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_Version = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_Version",
 			new String[] {String.class.getName(), Integer.class.getName()},
-			new String[] {"uuid_", "version"}, false);
+			new String[] {"uuid_", "version"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_Version =
 			new CollectionPersistenceFinder<>(
@@ -6077,10 +5457,10 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getUuid),
+					"=", true, true, FragmentEntryVersion::getUuid),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6098,12 +5478,12 @@ public class FragmentEntryVersionPersistenceImpl
 		_finderPathWithoutPaginationFindByUUID_G = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUUID_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "groupId"}, true);
+			new String[] {"uuid_", "groupId"}, 0, 1, true, null);
 
 		_finderPathCountByUUID_G = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUUID_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "groupId"}, false);
+			new String[] {"uuid_", "groupId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUUID_G =
 			new CollectionPersistenceFinder<>(
@@ -6113,32 +5493,34 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getUuid),
+					"=", true, true, FragmentEntryVersion::getUuid),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
 					"=", true, true, FragmentEntryVersion::getGroupId));
 
-		_finderPathFetchByUUID_G_Version = new FinderPath(
+		_finderPathFetchByUUID_G_Version = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByUUID_G_Version",
 			new String[] {
 				String.class.getName(), Long.class.getName(),
 				Integer.class.getName()
 			},
-			new String[] {"uuid_", "groupId", "version"}, true);
+			new String[] {"uuid_", "groupId", "version"}, 0, 1, false,
+			convertNullFunction(FragmentEntryVersion::getUuid),
+			FragmentEntryVersion::getGroupId, FragmentEntryVersion::getVersion);
 
 		_uniquePersistenceFinderByUUID_G_Version =
 			new UniquePersistenceFinder<>(
 				this, _finderPathFetchByUUID_G_Version,
-				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
+				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getUuid),
+					"=", true, true, FragmentEntryVersion::getUuid),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6156,12 +5538,12 @@ public class FragmentEntryVersionPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -6171,10 +5553,10 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getUuid),
+					"=", true, true, FragmentEntryVersion::getUuid),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "companyId",
 					FinderColumn.Type.LONG, "=", true, true,
@@ -6195,7 +5577,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Long.class.getName(),
 				Integer.class.getName()
 			},
-			new String[] {"uuid_", "companyId", "version"}, true);
+			new String[] {"uuid_", "companyId", "version"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C_Version = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C_Version",
@@ -6203,7 +5585,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Long.class.getName(),
 				Integer.class.getName()
 			},
-			new String[] {"uuid_", "companyId", "version"}, false);
+			new String[] {"uuid_", "companyId", "version"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C_Version =
 			new CollectionPersistenceFinder<>(
@@ -6213,13 +5595,13 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "uuid", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getUuid),
+					"=", true, true, FragmentEntryVersion::getUuid),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "companyId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getCompanyId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -6252,7 +5634,7 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
 					"=", true, true, FragmentEntryVersion::getGroupId));
@@ -6284,10 +5666,10 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6320,7 +5702,7 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
 					FinderColumn.Type.LONG, "=", true, true,
@@ -6359,10 +5741,10 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -6392,7 +5774,8 @@ public class FragmentEntryVersionPersistenceImpl
 			_finderPathWithoutPaginationFindByType, _finderPathCountByType,
 			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 			_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
-			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+			"",
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER, "=",
 				true, true, FragmentEntryVersion::getType));
@@ -6424,10 +5807,10 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER,
-					"=", true, false, FragmentEntryVersion::getType),
+					"=", true, true, FragmentEntryVersion::getType),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6457,10 +5840,11 @@ public class FragmentEntryVersionPersistenceImpl
 			_finderPathWithoutPaginationFindByG_FCI, _finderPathCountByG_FCI,
 			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 			_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
-			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+			"",
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, FragmentEntryVersion::getGroupId),
+				true, true, FragmentEntryVersion::getGroupId),
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "fragmentCollectionId",
 				FinderColumn.Type.LONG, "=", true, true,
@@ -6499,13 +5883,13 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -6524,44 +5908,48 @@ public class FragmentEntryVersionPersistenceImpl
 		_finderPathWithoutPaginationFindByG_FEK = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByG_FEK",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"groupId", "fragmentEntryKey"}, true);
+			new String[] {"groupId", "fragmentEntryKey"}, 0, 2, true, null);
 
 		_finderPathCountByG_FEK = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByG_FEK",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"groupId", "fragmentEntryKey"}, false);
+			new String[] {"groupId", "fragmentEntryKey"}, 0, 2, false, null);
 
 		_collectionPersistenceFinderByG_FEK = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByG_FEK,
 			_finderPathWithoutPaginationFindByG_FEK, _finderPathCountByG_FEK,
 			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 			_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
-			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			FragmentEntryVersionModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+			"",
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, FragmentEntryVersion::getGroupId),
+				true, true, FragmentEntryVersion::getGroupId),
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "fragmentEntryKey",
 				FinderColumn.Type.STRING, "=", true, true,
 				FragmentEntryVersion::getFragmentEntryKey));
 
-		_finderPathFetchByG_FEK_Version = new FinderPath(
+		_finderPathFetchByG_FEK_Version = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByG_FEK_Version",
 			new String[] {
 				Long.class.getName(), String.class.getName(),
 				Integer.class.getName()
 			},
-			new String[] {"groupId", "fragmentEntryKey", "version"}, true);
+			new String[] {"groupId", "fragmentEntryKey", "version"}, 0, 2,
+			false, FragmentEntryVersion::getGroupId,
+			convertNullFunction(FragmentEntryVersion::getFragmentEntryKey),
+			FragmentEntryVersion::getVersion);
 
 		_uniquePersistenceFinderByG_FEK_Version = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByG_FEK_Version,
-			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
+			_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE, "",
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, FragmentEntryVersion::getGroupId),
+				true, true, FragmentEntryVersion::getGroupId),
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "fragmentEntryKey",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				FragmentEntryVersion::getFragmentEntryKey),
 			new FinderColumn<>(
 				"fragmentEntryVersion.", "version", FinderColumn.Type.INTEGER,
@@ -6582,7 +5970,8 @@ public class FragmentEntryVersionPersistenceImpl
 				Long.class.getName(), Long.class.getName(),
 				String.class.getName()
 			},
-			new String[] {"groupId", "fragmentCollectionId", "name"}, true);
+			new String[] {"groupId", "fragmentCollectionId", "name"}, 0, 4,
+			true, null);
 
 		_finderPathCountByG_FCI_LikeN = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByG_FCI_LikeN",
@@ -6590,7 +5979,8 @@ public class FragmentEntryVersionPersistenceImpl
 				Long.class.getName(), Long.class.getName(),
 				String.class.getName()
 			},
-			new String[] {"groupId", "fragmentCollectionId", "name"}, false);
+			new String[] {"groupId", "fragmentCollectionId", "name"}, 0, 4,
+			false, null);
 
 		_collectionPersistenceFinderByG_FCI_LikeN =
 			new CollectionPersistenceFinder<>(
@@ -6600,13 +5990,13 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "name", FinderColumn.Type.STRING,
@@ -6631,7 +6021,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Integer.class.getName()
 			},
 			new String[] {"groupId", "fragmentCollectionId", "name", "version"},
-			true);
+			0, 4, true, null);
 
 		_finderPathCountByG_FCI_LikeN_Version = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION,
@@ -6641,7 +6031,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Integer.class.getName()
 			},
 			new String[] {"groupId", "fragmentCollectionId", "name", "version"},
-			false);
+			0, 4, false, null);
 
 		_collectionPersistenceFinderByG_FCI_LikeN_Version =
 			new CollectionPersistenceFinder<>(
@@ -6651,17 +6041,17 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "name", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getName),
+					"=", true, true, FragmentEntryVersion::getName),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6700,13 +6090,13 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER,
@@ -6755,17 +6145,17 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER,
-					"=", true, false, FragmentEntryVersion::getType),
+					"=", true, true, FragmentEntryVersion::getType),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6804,13 +6194,13 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
@@ -6860,17 +6250,17 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
-					FinderColumn.Type.INTEGER, "=", true, false,
+					FinderColumn.Type.INTEGER, "=", true, true,
 					FragmentEntryVersion::getStatus),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -6895,7 +6285,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Integer.class.getName()
 			},
 			new String[] {"groupId", "fragmentCollectionId", "name", "status"},
-			true);
+			0, 4, true, null);
 
 		_finderPathCountByG_FCI_LikeN_S = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByG_FCI_LikeN_S",
@@ -6904,7 +6294,7 @@ public class FragmentEntryVersionPersistenceImpl
 				String.class.getName(), Integer.class.getName()
 			},
 			new String[] {"groupId", "fragmentCollectionId", "name", "status"},
-			false);
+			0, 4, false, null);
 
 		_collectionPersistenceFinderByG_FCI_LikeN_S =
 			new CollectionPersistenceFinder<>(
@@ -6914,17 +6304,17 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "name", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getName),
+					"=", true, true, FragmentEntryVersion::getName),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -6957,7 +6347,7 @@ public class FragmentEntryVersionPersistenceImpl
 					"groupId", "fragmentCollectionId", "name", "status",
 					"version"
 				},
-				true);
+				0, 4, true, null);
 
 		_finderPathCountByG_FCI_LikeN_S_Version = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION,
@@ -6970,7 +6360,7 @@ public class FragmentEntryVersionPersistenceImpl
 			new String[] {
 				"groupId", "fragmentCollectionId", "name", "status", "version"
 			},
-			false);
+			0, 4, false, null);
 
 		_collectionPersistenceFinderByG_FCI_LikeN_S_Version =
 			new CollectionPersistenceFinder<>(
@@ -6980,20 +6370,20 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "name", FinderColumn.Type.STRING,
-					"=", true, false, FragmentEntryVersion::getName),
+					"=", true, true, FragmentEntryVersion::getName),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
-					FinderColumn.Type.INTEGER, "=", true, false,
+					FinderColumn.Type.INTEGER, "=", true, true,
 					FragmentEntryVersion::getStatus),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -7037,17 +6427,17 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER,
-					"=", true, false, FragmentEntryVersion::getType),
+					"=", true, true, FragmentEntryVersion::getType),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
 					FinderColumn.Type.INTEGER, "=", true, true,
@@ -7100,20 +6490,20 @@ public class FragmentEntryVersionPersistenceImpl
 				_SQL_SELECT_FRAGMENTENTRYVERSION_WHERE,
 				_SQL_COUNT_FRAGMENTENTRYVERSION_WHERE,
 				FragmentEntryVersionModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "groupId", FinderColumn.Type.LONG,
-					"=", true, false, FragmentEntryVersion::getGroupId),
+					"=", true, true, FragmentEntryVersion::getGroupId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "fragmentCollectionId",
-					FinderColumn.Type.LONG, "=", true, false,
+					FinderColumn.Type.LONG, "=", true, true,
 					FragmentEntryVersion::getFragmentCollectionId),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "type", FinderColumn.Type.INTEGER,
-					"=", true, false, FragmentEntryVersion::getType),
+					"=", true, true, FragmentEntryVersion::getType),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "status",
-					FinderColumn.Type.INTEGER, "=", true, false,
+					FinderColumn.Type.INTEGER, "=", true, true,
 					FragmentEntryVersion::getStatus),
 				new FinderColumn<>(
 					"fragmentEntryVersion.", "version",
@@ -7165,23 +6555,17 @@ public class FragmentEntryVersionPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		FragmentEntryVersionModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_FRAGMENTENTRYVERSION =
 		"SELECT fragmentEntryVersion FROM FragmentEntryVersion fragmentEntryVersion";
 
 	private static final String _SQL_SELECT_FRAGMENTENTRYVERSION_WHERE =
 		"SELECT fragmentEntryVersion FROM FragmentEntryVersion fragmentEntryVersion WHERE ";
 
-	private static final String _SQL_COUNT_FRAGMENTENTRYVERSION =
-		"SELECT COUNT(fragmentEntryVersion) FROM FragmentEntryVersion fragmentEntryVersion";
-
 	private static final String _SQL_COUNT_FRAGMENTENTRYVERSION_WHERE =
 		"SELECT COUNT(fragmentEntryVersion) FROM FragmentEntryVersion fragmentEntryVersion WHERE ";
-
-	private static final String _ORDER_BY_ENTITY_ALIAS =
-		"fragmentEntryVersion.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No FragmentEntryVersion exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No FragmentEntryVersion exists with the key {";
@@ -7198,4 +6582,4 @@ public class FragmentEntryVersionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:79558193
+// LIFERAY-SERVICE-BUILDER-HASH:-378769029

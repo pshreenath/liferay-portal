@@ -46,21 +46,23 @@ const CriteriaCard: React.FC<ICriteriaCardProps> = ({
 			id={ReportContainer.SegmentCriteriaCard}
 		>
 			<Panel.Body className='criteria-card-root'>
-				{segmentType === SegmentTypes.RealTime && sequential && (
-					<Label display='info' size='lg' uppercase>
-						{Liferay.Language.get('sequential')}
-					</Label>
-				)}
-
 				{includeAnonymousUsers && (
 					<Label display='info' size='lg' uppercase>
 						{Liferay.Language.get('includes-anonymous-individuals')}
 					</Label>
 				)}
+
+				{segmentType === SegmentTypes.RealTime && sequential && (
+					<Label display='info' size='lg' uppercase>
+						{Liferay.Language.get('sequential-events')}
+					</Label>
+				)}
+
 				<CriteriaView
 					criteria={translateQueryToCriteria(criteriaString)}
 					ref={_criteriaViewRef}
 					segmentType={segmentType}
+					sequential={sequential}
 					timeZoneId={timeZoneId}
 				/>
 			</Panel.Body>

@@ -16,13 +16,11 @@ import com.liferay.blogs.service.persistence.BlogsEntryUtil;
 import com.liferay.blogs.service.persistence.impl.constants.BlogsPersistenceConstants;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -40,6 +38,7 @@ import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
+import com.liferay.portal.kernel.service.persistence.impl.ArrayableFinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
@@ -48,8 +47,6 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -68,7 +65,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,7 +89,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = BlogsEntryPersistence.class)
 public class BlogsEntryPersistenceImpl
-	extends BasePersistenceImpl<BlogsEntry> implements BlogsEntryPersistence {
+	extends BasePersistenceImpl<BlogsEntry, NoSuchEntryException>
+	implements BlogsEntryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -109,9 +106,6 @@ public class BlogsEntryPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -741,7 +735,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1368,7 +1362,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1762,7 +1756,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2140,7 +2134,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3382,7 +3376,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3564,7 +3558,8 @@ public class BlogsEntryPersistenceImpl
 	private FinderPath _finderPathWithPaginationFindByG_U_S;
 	private FinderPath _finderPathWithoutPaginationFindByG_U_S;
 	private FinderPath _finderPathCountByG_U_S;
-	private FinderPath _finderPathWithPaginationCountByG_U_S;
+	private CollectionPersistenceFinder<BlogsEntry>
+		_collectionPersistenceFinderByG_U_S;
 
 	/**
 	 * Returns all the blogs entries where groupId = &#63; and userId = &#63; and status = &#63;.
@@ -3652,106 +3647,9 @@ public class BlogsEntryPersistenceImpl
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					BlogsEntry.class)) {
 
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindByG_U_S;
-					finderArgs = new Object[] {groupId, userId, status};
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindByG_U_S;
-				finderArgs = new Object[] {
-					groupId, userId, status, start, end, orderByComparator
-				};
-			}
-
-			List<BlogsEntry> list = null;
-
-			if (useFinderCache) {
-				list = (List<BlogsEntry>)finderCache.getResult(
-					finderPath, finderArgs, this);
-
-				if ((list != null) && !list.isEmpty()) {
-					for (BlogsEntry blogsEntry : list) {
-						if ((groupId != blogsEntry.getGroupId()) ||
-							(userId != blogsEntry.getUserId()) ||
-							(status != blogsEntry.getStatus())) {
-
-							list = null;
-
-							break;
-						}
-					}
-				}
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						5 + (orderByComparator.getOrderByFields().length * 2));
-				}
-				else {
-					sb = new StringBundler(5);
-				}
-
-				sb.append(_SQL_SELECT_BLOGSENTRY_WHERE);
-
-				sb.append(_FINDER_COLUMN_G_U_S_GROUPID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_USERID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_STATUS_2);
-
-				if (orderByComparator != null) {
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-				}
-				else {
-					sb.append(BlogsEntryModelImpl.ORDER_BY_JPQL);
-				}
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(groupId);
-
-					queryPos.add(userId);
-
-					queryPos.add(status);
-
-					list = (List<BlogsEntry>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
+			return _collectionPersistenceFinderByG_U_S.find(
+				finderCache, new Object[] {groupId, userId, new int[] {status}},
+				start, end, orderByComparator, useFinderCache);
 		}
 	}
 
@@ -3810,14 +3708,9 @@ public class BlogsEntryPersistenceImpl
 		long groupId, long userId, int status,
 		OrderByComparator<BlogsEntry> orderByComparator) {
 
-		List<BlogsEntry> list = findByG_U_S(
-			groupId, userId, status, 0, 1, orderByComparator);
-
-		if (!list.isEmpty()) {
-			return list.get(0);
-		}
-
-		return null;
+		return _collectionPersistenceFinderByG_U_S.fetchFirst(
+			finderCache, new Object[] {groupId, userId, new int[] {status}},
+			orderByComparator);
 	}
 
 	/**
@@ -3923,7 +3816,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -4091,7 +3984,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -4230,129 +4123,16 @@ public class BlogsEntryPersistenceImpl
 		OrderByComparator<BlogsEntry> orderByComparator,
 		boolean useFinderCache) {
 
-		if (statuses == null) {
-			statuses = new int[0];
-		}
-		else if (statuses.length > 1) {
-			statuses = ArrayUtil.sortedUnique(statuses);
-		}
-
-		if (statuses.length == 1) {
-			return findByG_U_S(
-				groupId, userId, statuses[0], start, end, orderByComparator);
-		}
-
 		try (SafeCloseable safeCloseable =
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					BlogsEntry.class)) {
 
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderArgs = new Object[] {
-						groupId, userId, StringUtil.merge(statuses)
-					};
-				}
-			}
-			else if (useFinderCache) {
-				finderArgs = new Object[] {
-					groupId, userId, StringUtil.merge(statuses), start, end,
-					orderByComparator
-				};
-			}
-
-			List<BlogsEntry> list = null;
-
-			if (useFinderCache) {
-				list = (List<BlogsEntry>)finderCache.getResult(
-					_finderPathWithPaginationFindByG_U_S, finderArgs, this);
-
-				if ((list != null) && !list.isEmpty()) {
-					for (BlogsEntry blogsEntry : list) {
-						if ((groupId != blogsEntry.getGroupId()) ||
-							(userId != blogsEntry.getUserId()) ||
-							!ArrayUtil.contains(
-								statuses, blogsEntry.getStatus())) {
-
-							list = null;
-
-							break;
-						}
-					}
-				}
-			}
-
-			if (list == null) {
-				StringBundler sb = new StringBundler();
-
-				sb.append(_SQL_SELECT_BLOGSENTRY_WHERE);
-
-				sb.append(_FINDER_COLUMN_G_U_S_GROUPID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_USERID_2);
-
-				if (statuses.length > 0) {
-					sb.append("(");
-
-					sb.append(_FINDER_COLUMN_G_U_S_STATUS_7);
-
-					sb.append(StringUtil.merge(statuses));
-
-					sb.append(")");
-
-					sb.append(")");
-				}
-
-				sb.setStringAt(
-					removeConjunction(sb.stringAt(sb.index() - 1)),
-					sb.index() - 1);
-
-				if (orderByComparator != null) {
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-				}
-				else {
-					sb.append(BlogsEntryModelImpl.ORDER_BY_JPQL);
-				}
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(groupId);
-
-					queryPos.add(userId);
-
-					list = (List<BlogsEntry>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(
-							_finderPathWithPaginationFindByG_U_S, finderArgs,
-							list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
+			return _collectionPersistenceFinderByG_U_S.find(
+				finderCache,
+				new Object[] {
+					groupId, userId, ArrayUtil.sortedUnique(statuses)
+				},
+				start, end, orderByComparator, useFinderCache);
 		}
 	}
 
@@ -4365,13 +4145,8 @@ public class BlogsEntryPersistenceImpl
 	 */
 	@Override
 	public void removeByG_U_S(long groupId, long userId, int status) {
-		for (BlogsEntry blogsEntry :
-				findByG_U_S(
-					groupId, userId, status, QueryUtil.ALL_POS,
-					QueryUtil.ALL_POS, null)) {
-
-			remove(blogsEntry);
-		}
+		_collectionPersistenceFinderByG_U_S.remove(
+			finderCache, new Object[] {groupId, userId, new int[] {status}});
 	}
 
 	/**
@@ -4388,54 +4163,9 @@ public class BlogsEntryPersistenceImpl
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					BlogsEntry.class)) {
 
-			FinderPath finderPath = _finderPathCountByG_U_S;
-
-			Object[] finderArgs = new Object[] {groupId, userId, status};
-
-			Long count = (Long)finderCache.getResult(
-				finderPath, finderArgs, this);
-
-			if (count == null) {
-				StringBundler sb = new StringBundler(4);
-
-				sb.append(_SQL_COUNT_BLOGSENTRY_WHERE);
-
-				sb.append(_FINDER_COLUMN_G_U_S_GROUPID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_USERID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_STATUS_2);
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(groupId);
-
-					queryPos.add(userId);
-
-					queryPos.add(status);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(finderPath, finderArgs, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
+			return _collectionPersistenceFinderByG_U_S.count(
+				finderCache,
+				new Object[] {groupId, userId, new int[] {status}});
 		}
 	}
 
@@ -4449,79 +4179,15 @@ public class BlogsEntryPersistenceImpl
 	 */
 	@Override
 	public int countByG_U_S(long groupId, long userId, int[] statuses) {
-		if (statuses == null) {
-			statuses = new int[0];
-		}
-		else if (statuses.length > 1) {
-			statuses = ArrayUtil.sortedUnique(statuses);
-		}
-
 		try (SafeCloseable safeCloseable =
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					BlogsEntry.class)) {
 
-			Object[] finderArgs = new Object[] {
-				groupId, userId, StringUtil.merge(statuses)
-			};
-
-			Long count = (Long)finderCache.getResult(
-				_finderPathWithPaginationCountByG_U_S, finderArgs, this);
-
-			if (count == null) {
-				StringBundler sb = new StringBundler();
-
-				sb.append(_SQL_COUNT_BLOGSENTRY_WHERE);
-
-				sb.append(_FINDER_COLUMN_G_U_S_GROUPID_2);
-
-				sb.append(_FINDER_COLUMN_G_U_S_USERID_2);
-
-				if (statuses.length > 0) {
-					sb.append("(");
-
-					sb.append(_FINDER_COLUMN_G_U_S_STATUS_7);
-
-					sb.append(StringUtil.merge(statuses));
-
-					sb.append(")");
-
-					sb.append(")");
-				}
-
-				sb.setStringAt(
-					removeConjunction(sb.stringAt(sb.index() - 1)),
-					sb.index() - 1);
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(groupId);
-
-					queryPos.add(userId);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(
-						_finderPathWithPaginationCountByG_U_S, finderArgs,
-						count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
+			return _collectionPersistenceFinderByG_U_S.count(
+				finderCache,
+				new Object[] {
+					groupId, userId, ArrayUtil.sortedUnique(statuses)
+				});
 		}
 	}
 
@@ -4937,7 +4603,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -5359,7 +5025,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -5796,7 +5462,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -6235,7 +5901,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -6674,7 +6340,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -7852,7 +7518,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -8325,7 +7991,7 @@ public class BlogsEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -8633,147 +8299,6 @@ public class BlogsEntryPersistenceImpl
 	}
 
 	/**
-	 * Caches the blogs entry in the entity cache if it is enabled.
-	 *
-	 * @param blogsEntry the blogs entry
-	 */
-	@Override
-	public void cacheResult(BlogsEntry blogsEntry) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					blogsEntry.getCtCollectionId())) {
-
-			entityCache.putResult(
-				BlogsEntryImpl.class, blogsEntry.getPrimaryKey(), blogsEntry);
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G,
-				new Object[] {blogsEntry.getUuid(), blogsEntry.getGroupId()},
-				blogsEntry);
-
-			finderCache.putResult(
-				_finderPathFetchByG_UT,
-				new Object[] {
-					blogsEntry.getGroupId(), blogsEntry.getUrlTitle()
-				},
-				blogsEntry);
-
-			finderCache.putResult(
-				_finderPathFetchByERC_G,
-				new Object[] {
-					blogsEntry.getExternalReferenceCode(),
-					blogsEntry.getGroupId()
-				},
-				blogsEntry);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the blogs entries in the entity cache if it is enabled.
-	 *
-	 * @param blogsEntries the blogs entries
-	 */
-	@Override
-	public void cacheResult(List<BlogsEntry> blogsEntries) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (blogsEntries.size() > _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (BlogsEntry blogsEntry : blogsEntries) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						blogsEntry.getCtCollectionId())) {
-
-				if (entityCache.getResult(
-						BlogsEntryImpl.class, blogsEntry.getPrimaryKey()) ==
-							null) {
-
-					cacheResult(blogsEntry);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all blogs entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(BlogsEntryImpl.class);
-
-		finderCache.clearCache(BlogsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the blogs entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(BlogsEntry blogsEntry) {
-		entityCache.removeResult(BlogsEntryImpl.class, blogsEntry);
-	}
-
-	@Override
-	public void clearCache(List<BlogsEntry> blogsEntries) {
-		for (BlogsEntry blogsEntry : blogsEntries) {
-			entityCache.removeResult(BlogsEntryImpl.class, blogsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(BlogsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(BlogsEntryImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		BlogsEntryModelImpl blogsEntryModelImpl) {
-
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					blogsEntryModelImpl.getCtCollectionId())) {
-
-			Object[] args = new Object[] {
-				blogsEntryModelImpl.getUuid(), blogsEntryModelImpl.getGroupId()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G, args, blogsEntryModelImpl);
-
-			args = new Object[] {
-				blogsEntryModelImpl.getGroupId(),
-				blogsEntryModelImpl.getUrlTitle()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByG_UT, args, blogsEntryModelImpl);
-
-			args = new Object[] {
-				blogsEntryModelImpl.getExternalReferenceCode(),
-				blogsEntryModelImpl.getGroupId()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByERC_G, args, blogsEntryModelImpl);
-		}
-	}
-
-	/**
 	 * Creates a new blogs entry with the primary key. Does not add the blogs entry to the database.
 	 *
 	 * @param entryId the primary key for the new blogs entry
@@ -8805,47 +8330,6 @@ public class BlogsEntryPersistenceImpl
 	@Override
 	public BlogsEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the blogs entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry that was removed
-	 * @throws NoSuchEntryException if a blogs entry with the primary key could not be found
-	 */
-	@Override
-	public BlogsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			BlogsEntry blogsEntry = (BlogsEntry)session.get(
-				BlogsEntryImpl.class, primaryKey);
-
-			if (blogsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(blogsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -9054,41 +8538,13 @@ public class BlogsEntryPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			BlogsEntryImpl.class, blogsEntryModelImpl, false, true);
-
-		cacheUniqueFindersCache(blogsEntryModelImpl);
+		cacheUniqueFindersResult(blogsEntry, false);
 
 		if (isNew) {
 			blogsEntry.setNew(false);
 		}
 
 		blogsEntry.resetOriginalValues();
-
-		return blogsEntry;
-	}
-
-	/**
-	 * Returns the blogs entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry
-	 * @throws NoSuchEntryException if a blogs entry with the primary key could not be found
-	 */
-	@Override
-	public BlogsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		BlogsEntry blogsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (blogsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return blogsEntry;
 	}
@@ -9107,52 +8563,9 @@ public class BlogsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the blogs entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry, or <code>null</code> if a blogs entry with the primary key could not be found
-	 */
 	@Override
-	public BlogsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				BlogsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		BlogsEntry blogsEntry = (BlogsEntry)entityCache.getResult(
-			BlogsEntryImpl.class, primaryKey);
-
-		if (blogsEntry != null) {
-			return blogsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			blogsEntry = (BlogsEntry)session.get(
-				BlogsEntryImpl.class, primaryKey);
-
-			if (blogsEntry != null) {
-				cacheResult(blogsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return blogsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -9164,318 +8577,6 @@ public class BlogsEntryPersistenceImpl
 	@Override
 	public BlogsEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, BlogsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(BlogsEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, BlogsEntry> map =
-			new HashMap<Serializable, BlogsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			BlogsEntry blogsEntry = fetchByPrimaryKey(primaryKey);
-
-			if (blogsEntry != null) {
-				map.put(primaryKey, blogsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						BlogsEntry.class, primaryKey)) {
-
-				BlogsEntry blogsEntry = (BlogsEntry)entityCache.getResult(
-					BlogsEntryImpl.class, primaryKey);
-
-				if (blogsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, blogsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (BlogsEntry blogsEntry : (List<BlogsEntry>)query.list()) {
-				map.put(blogsEntry.getPrimaryKeyObj(), blogsEntry);
-
-				cacheResult(blogsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the blogs entries.
-	 *
-	 * @return the blogs entries
-	 */
-	@Override
-	public List<BlogsEntry> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the blogs entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>BlogsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of blogs entries
-	 * @param end the upper bound of the range of blogs entries (not inclusive)
-	 * @return the range of blogs entries
-	 */
-	@Override
-	public List<BlogsEntry> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the blogs entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>BlogsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of blogs entries
-	 * @param end the upper bound of the range of blogs entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of blogs entries
-	 */
-	@Override
-	public List<BlogsEntry> findAll(
-		int start, int end, OrderByComparator<BlogsEntry> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the blogs entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>BlogsEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of blogs entries
-	 * @param end the upper bound of the range of blogs entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of blogs entries
-	 */
-	@Override
-	public List<BlogsEntry> findAll(
-		int start, int end, OrderByComparator<BlogsEntry> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					BlogsEntry.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<BlogsEntry> list = null;
-
-			if (useFinderCache) {
-				list = (List<BlogsEntry>)finderCache.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_BLOGSENTRY);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_BLOGSENTRY;
-
-					sql = sql.concat(BlogsEntryModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<BlogsEntry>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the blogs entries from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (BlogsEntry blogsEntry : findAll()) {
-			remove(blogsEntry);
-		}
-	}
-
-	/**
-	 * Returns the number of blogs entries.
-	 *
-	 * @return the number of blogs entries
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					BlogsEntry.class)) {
-
-			Long count = (Long)finderCache.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(_SQL_COUNT_BLOGSENTRY);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -9595,21 +8696,6 @@ public class BlogsEntryPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -9620,33 +8706,34 @@ public class BlogsEntryPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "uuid", FinderColumn.Type.STRING, "=", true,
 				true, BlogsEntry::getUuid));
 
-		_finderPathFetchByUUID_G = new FinderPath(
+		_finderPathFetchByUUID_G = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByUUID_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "groupId"}, true);
+			new String[] {"uuid_", "groupId"}, 0, 1, false,
+			convertNullFunction(BlogsEntry::getUuid), BlogsEntry::getGroupId);
 
 		_uniquePersistenceFinderByUUID_G = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByUUID_G, _SQL_SELECT_BLOGSENTRY_WHERE,
+			this, _finderPathFetchByUUID_G, _SQL_SELECT_BLOGSENTRY_WHERE, "",
 			new FinderColumn<>(
 				"blogsEntry.", "uuid", FinderColumn.Type.STRING, "=", true,
-				false, BlogsEntry::getUuid),
+				true, BlogsEntry::getUuid),
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
 				true, BlogsEntry::getGroupId));
@@ -9663,12 +8750,12 @@ public class BlogsEntryPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -9676,10 +8763,10 @@ public class BlogsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_BLOGSENTRY_WHERE,
 				_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "uuid", FinderColumn.Type.STRING, "=", true,
-					false, BlogsEntry::getUuid),
+					true, BlogsEntry::getUuid),
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, BlogsEntry::getCompanyId));
@@ -9708,7 +8795,7 @@ public class BlogsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByGroupId,
 				_finderPathCountByGroupId, _SQL_SELECT_BLOGSENTRY_WHERE,
 				_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
 					true, BlogsEntry::getGroupId));
@@ -9737,21 +8824,23 @@ public class BlogsEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByCompanyId,
 				_finderPathCountByCompanyId, _SQL_SELECT_BLOGSENTRY_WHERE,
 				_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, BlogsEntry::getCompanyId));
 
-		_finderPathFetchByG_UT = new FinderPath(
+		_finderPathFetchByG_UT = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByG_UT",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"groupId", "urlTitle"}, true);
+			new String[] {"groupId", "urlTitle"}, 0, 2, false,
+			BlogsEntry::getGroupId,
+			convertNullFunction(BlogsEntry::getUrlTitle));
 
 		_uniquePersistenceFinderByG_UT = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByG_UT, _SQL_SELECT_BLOGSENTRY_WHERE,
+			this, _finderPathFetchByG_UT, _SQL_SELECT_BLOGSENTRY_WHERE, "",
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getGroupId),
+				true, BlogsEntry::getGroupId),
 			new FinderColumn<>(
 				"blogsEntry.", "urlTitle", FinderColumn.Type.STRING, "=", true,
 				true, BlogsEntry::getUrlTitle));
@@ -9774,10 +8863,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByG_LtD, null,
 			_finderPathWithPaginationCountByG_LtD, _SQL_SELECT_BLOGSENTRY_WHERE,
 			_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-			_ORDER_BY_ENTITY_ALIAS,
+			_ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getGroupId),
+				true, BlogsEntry::getGroupId),
 			new FinderColumn<>(
 				"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<", true,
 				true, BlogsEntry::getDisplayDate));
@@ -9805,10 +8894,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByG_S,
 			_finderPathWithoutPaginationFindByG_S, _finderPathCountByG_S,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getGroupId),
+				true, BlogsEntry::getGroupId),
 			new FinderColumn<>(
 				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, BlogsEntry::getStatus));
@@ -9832,10 +8921,10 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_NotS, null,
 				_finderPathWithPaginationCountByG_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -9863,10 +8952,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByC_U,
 			_finderPathWithoutPaginationFindByC_U, _finderPathCountByC_U,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getCompanyId),
+				true, BlogsEntry::getCompanyId),
 			new FinderColumn<>(
 				"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
 				true, BlogsEntry::getUserId));
@@ -9889,10 +8978,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByC_LtD, null,
 			_finderPathWithPaginationCountByC_LtD, _SQL_SELECT_BLOGSENTRY_WHERE,
 			_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-			_ORDER_BY_ENTITY_ALIAS,
+			_ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getCompanyId),
+				true, BlogsEntry::getCompanyId),
 			new FinderColumn<>(
 				"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<", true,
 				true, BlogsEntry::getDisplayDate));
@@ -9920,10 +9009,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByC_S,
 			_finderPathWithoutPaginationFindByC_S, _finderPathCountByC_S,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getCompanyId),
+				true, BlogsEntry::getCompanyId),
 			new FinderColumn<>(
 				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, BlogsEntry::getStatus));
@@ -9947,10 +9036,10 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByC_NotS, null,
 				_finderPathWithPaginationCountByC_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
-					true, false, BlogsEntry::getCompanyId),
+					true, true, BlogsEntry::getCompanyId),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -9973,10 +9062,10 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByLtD_S, null,
 			_finderPathWithPaginationCountByLtD_S, _SQL_SELECT_BLOGSENTRY_WHERE,
 			_SQL_COUNT_BLOGSENTRY_WHERE, BlogsEntryModelImpl.ORDER_BY_JPQL,
-			_ORDER_BY_ENTITY_ALIAS,
+			_ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<", true,
-				false, BlogsEntry::getDisplayDate),
+				true, BlogsEntry::getDisplayDate),
 			new FinderColumn<>(
 				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, BlogsEntry::getStatus));
@@ -10002,13 +9091,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_U_LtD, null,
 				_finderPathWithPaginationCountByG_U_LtD,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getUserId),
+					true, BlogsEntry::getUserId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
 					true, true, BlogsEntry::getDisplayDate));
@@ -10031,20 +9120,27 @@ public class BlogsEntryPersistenceImpl
 			new String[] {"groupId", "userId", "status"}, true);
 
 		_finderPathCountByG_U_S = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByG_U_S",
-			new String[] {
-				Long.class.getName(), Long.class.getName(),
-				Integer.class.getName()
-			},
-			new String[] {"groupId", "userId", "status"}, false);
-
-		_finderPathWithPaginationCountByG_U_S = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "countByG_U_S",
 			new String[] {
 				Long.class.getName(), Long.class.getName(),
 				Integer.class.getName()
 			},
 			new String[] {"groupId", "userId", "status"}, false);
+
+		_collectionPersistenceFinderByG_U_S = new CollectionPersistenceFinder<>(
+			this, _finderPathWithPaginationFindByG_U_S,
+			_finderPathWithoutPaginationFindByG_U_S, _finderPathCountByG_U_S,
+			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
+			new FinderColumn<>(
+				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
+				true, BlogsEntry::getGroupId),
+			new FinderColumn<>(
+				"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
+				true, BlogsEntry::getUserId),
+			new ArrayableFinderColumn<>(
+				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", false,
+				true, true, BlogsEntry::getStatus));
 
 		_finderPathWithPaginationFindByG_U_NotS = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByG_U_NotS",
@@ -10068,13 +9164,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_U_NotS, null,
 				_finderPathWithPaginationCountByG_U_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getUserId),
+					true, BlogsEntry::getUserId),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -10108,13 +9204,13 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByG_D_S,
 			_finderPathWithoutPaginationFindByG_D_S, _finderPathCountByG_D_S,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getGroupId),
+				true, BlogsEntry::getGroupId),
 			new FinderColumn<>(
 				"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "=", true,
-				false, BlogsEntry::getDisplayDate),
+				true, BlogsEntry::getDisplayDate),
 			new FinderColumn<>(
 				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, BlogsEntry::getStatus));
@@ -10141,13 +9237,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_GtD_S, null,
 				_finderPathWithPaginationCountByG_GtD_S,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, ">",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=",
 					true, true, BlogsEntry::getStatus));
@@ -10174,13 +9270,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_LtD_S, null,
 				_finderPathWithPaginationCountByG_LtD_S,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=",
 					true, true, BlogsEntry::getStatus));
@@ -10207,13 +9303,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_LtD_NotS, null,
 				_finderPathWithPaginationCountByG_LtD_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -10247,13 +9343,13 @@ public class BlogsEntryPersistenceImpl
 			this, _finderPathWithPaginationFindByC_U_S,
 			_finderPathWithoutPaginationFindByC_U_S, _finderPathCountByC_U_S,
 			_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-			BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getCompanyId),
+				true, BlogsEntry::getCompanyId),
 			new FinderColumn<>(
 				"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-				false, BlogsEntry::getUserId),
+				true, BlogsEntry::getUserId),
 			new FinderColumn<>(
 				"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, BlogsEntry::getStatus));
@@ -10280,13 +9376,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByC_U_NotS, null,
 				_finderPathWithPaginationCountByC_U_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
-					true, false, BlogsEntry::getCompanyId),
+					true, true, BlogsEntry::getCompanyId),
 				new FinderColumn<>(
 					"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getUserId),
+					true, BlogsEntry::getUserId),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -10313,13 +9409,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByC_LtD_S, null,
 				_finderPathWithPaginationCountByC_LtD_S,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
-					true, false, BlogsEntry::getCompanyId),
+					true, true, BlogsEntry::getCompanyId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=",
 					true, true, BlogsEntry::getStatus));
@@ -10346,13 +9442,13 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByC_LtD_NotS, null,
 				_finderPathWithPaginationCountByC_LtD_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "companyId", FinderColumn.Type.LONG, "=",
-					true, false, BlogsEntry::getCompanyId),
+					true, true, BlogsEntry::getCompanyId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
@@ -10380,16 +9476,16 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_U_LtD_S, null,
 				_finderPathWithPaginationCountByG_U_LtD_S,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getUserId),
+					true, BlogsEntry::getUserId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "=",
 					true, true, BlogsEntry::getStatus));
@@ -10417,30 +9513,32 @@ public class BlogsEntryPersistenceImpl
 				this, _finderPathWithPaginationFindByG_U_LtD_NotS, null,
 				_finderPathWithPaginationCountByG_U_LtD_NotS,
 				_SQL_SELECT_BLOGSENTRY_WHERE, _SQL_COUNT_BLOGSENTRY_WHERE,
-				BlogsEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				BlogsEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getGroupId),
+					true, BlogsEntry::getGroupId),
 				new FinderColumn<>(
 					"blogsEntry.", "userId", FinderColumn.Type.LONG, "=", true,
-					false, BlogsEntry::getUserId),
+					true, BlogsEntry::getUserId),
 				new FinderColumn<>(
 					"blogsEntry.", "displayDate", FinderColumn.Type.DATE, "<",
-					true, false, BlogsEntry::getDisplayDate),
+					true, true, BlogsEntry::getDisplayDate),
 				new FinderColumn<>(
 					"blogsEntry.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, BlogsEntry::getStatus));
 
-		_finderPathFetchByERC_G = new FinderPath(
+		_finderPathFetchByERC_G = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "groupId"}, true);
+			new String[] {"externalReferenceCode", "groupId"}, 0, 1, false,
+			convertNullFunction(BlogsEntry::getExternalReferenceCode),
+			BlogsEntry::getGroupId);
 
 		_uniquePersistenceFinderByERC_G = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByERC_G, _SQL_SELECT_BLOGSENTRY_WHERE,
+			this, _finderPathFetchByERC_G, _SQL_SELECT_BLOGSENTRY_WHERE, "",
 			new FinderColumn<>(
 				"blogsEntry.", "externalReferenceCode",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				BlogsEntry::getExternalReferenceCode),
 			new FinderColumn<>(
 				"blogsEntry.", "groupId", FinderColumn.Type.LONG, "=", true,
@@ -10491,14 +9589,14 @@ public class BlogsEntryPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		BlogsEntryModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_BLOGSENTRY =
 		"SELECT blogsEntry FROM BlogsEntry blogsEntry";
 
 	private static final String _SQL_SELECT_BLOGSENTRY_WHERE =
 		"SELECT blogsEntry FROM BlogsEntry blogsEntry WHERE ";
-
-	private static final String _SQL_COUNT_BLOGSENTRY =
-		"SELECT COUNT(blogsEntry) FROM BlogsEntry blogsEntry";
 
 	private static final String _SQL_COUNT_BLOGSENTRY_WHERE =
 		"SELECT COUNT(blogsEntry) FROM BlogsEntry blogsEntry WHERE ";
@@ -10524,12 +9622,7 @@ public class BlogsEntryPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "BlogsEntry";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "blogsEntry.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "BlogsEntry.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No BlogsEntry exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No BlogsEntry exists with the key {";
@@ -10546,4 +9639,4 @@ public class BlogsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-464151192
+// LIFERAY-SERVICE-BUILDER-HASH:658667815

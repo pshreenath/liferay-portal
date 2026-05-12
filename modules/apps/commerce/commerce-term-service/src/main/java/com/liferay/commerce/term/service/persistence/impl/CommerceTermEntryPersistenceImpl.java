@@ -20,7 +20,6 @@ import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -44,8 +43,6 @@ import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinde
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -83,7 +80,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommerceTermEntryPersistence.class)
 public class CommerceTermEntryPersistenceImpl
-	extends BasePersistenceImpl<CommerceTermEntry>
+	extends BasePersistenceImpl<CommerceTermEntry, NoSuchTermEntryException>
 	implements CommerceTermEntryPersistence {
 
 	/*
@@ -100,9 +97,6 @@ public class CommerceTermEntryPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -324,7 +318,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -717,7 +711,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1112,7 +1106,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1592,7 +1586,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1996,7 +1990,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2402,7 +2396,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2824,7 +2818,7 @@ public class CommerceTermEntryPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3227,141 +3221,6 @@ public class CommerceTermEntryPersistenceImpl
 	}
 
 	/**
-	 * Caches the commerce term entry in the entity cache if it is enabled.
-	 *
-	 * @param commerceTermEntry the commerce term entry
-	 */
-	@Override
-	public void cacheResult(CommerceTermEntry commerceTermEntry) {
-		entityCache.putResult(
-			CommerceTermEntryImpl.class, commerceTermEntry.getPrimaryKey(),
-			commerceTermEntry);
-
-		finderCache.putResult(
-			_finderPathFetchByC_N,
-			new Object[] {
-				commerceTermEntry.getCompanyId(), commerceTermEntry.getName()
-			},
-			commerceTermEntry);
-
-		finderCache.putResult(
-			_finderPathFetchByC_P_T,
-			new Object[] {
-				commerceTermEntry.getCompanyId(),
-				commerceTermEntry.getPriority(), commerceTermEntry.getType()
-			},
-			commerceTermEntry);
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C,
-			new Object[] {
-				commerceTermEntry.getExternalReferenceCode(),
-				commerceTermEntry.getCompanyId()
-			},
-			commerceTermEntry);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the commerce term entries in the entity cache if it is enabled.
-	 *
-	 * @param commerceTermEntries the commerce term entries
-	 */
-	@Override
-	public void cacheResult(List<CommerceTermEntry> commerceTermEntries) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (commerceTermEntries.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (CommerceTermEntry commerceTermEntry : commerceTermEntries) {
-			if (entityCache.getResult(
-					CommerceTermEntryImpl.class,
-					commerceTermEntry.getPrimaryKey()) == null) {
-
-				cacheResult(commerceTermEntry);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all commerce term entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CommerceTermEntryImpl.class);
-
-		finderCache.clearCache(CommerceTermEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce term entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CommerceTermEntry commerceTermEntry) {
-		entityCache.removeResult(
-			CommerceTermEntryImpl.class, commerceTermEntry);
-	}
-
-	@Override
-	public void clearCache(List<CommerceTermEntry> commerceTermEntries) {
-		for (CommerceTermEntry commerceTermEntry : commerceTermEntries) {
-			entityCache.removeResult(
-				CommerceTermEntryImpl.class, commerceTermEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CommerceTermEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CommerceTermEntryImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		CommerceTermEntryModelImpl commerceTermEntryModelImpl) {
-
-		Object[] args = new Object[] {
-			commerceTermEntryModelImpl.getCompanyId(),
-			commerceTermEntryModelImpl.getName()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByC_N, args, commerceTermEntryModelImpl);
-
-		args = new Object[] {
-			commerceTermEntryModelImpl.getCompanyId(),
-			commerceTermEntryModelImpl.getPriority(),
-			commerceTermEntryModelImpl.getType()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByC_P_T, args, commerceTermEntryModelImpl);
-
-		args = new Object[] {
-			commerceTermEntryModelImpl.getExternalReferenceCode(),
-			commerceTermEntryModelImpl.getCompanyId()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C, args, commerceTermEntryModelImpl);
-	}
-
-	/**
 	 * Creates a new commerce term entry with the primary key. Does not add the commerce term entry to the database.
 	 *
 	 * @param commerceTermEntryId the primary key for the new commerce term entry
@@ -3395,48 +3254,6 @@ public class CommerceTermEntryPersistenceImpl
 		throws NoSuchTermEntryException {
 
 		return remove((Serializable)commerceTermEntryId);
-	}
-
-	/**
-	 * Removes the commerce term entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce term entry
-	 * @return the commerce term entry that was removed
-	 * @throws NoSuchTermEntryException if a commerce term entry with the primary key could not be found
-	 */
-	@Override
-	public CommerceTermEntry remove(Serializable primaryKey)
-		throws NoSuchTermEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommerceTermEntry commerceTermEntry =
-				(CommerceTermEntry)session.get(
-					CommerceTermEntryImpl.class, primaryKey);
-
-			if (commerceTermEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTermEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commerceTermEntry);
-		}
-		catch (NoSuchTermEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3616,42 +3433,13 @@ public class CommerceTermEntryPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			CommerceTermEntryImpl.class, commerceTermEntryModelImpl, false,
-			true);
-
-		cacheUniqueFindersCache(commerceTermEntryModelImpl);
+		cacheUniqueFindersResult(commerceTermEntry, false);
 
 		if (isNew) {
 			commerceTermEntry.setNew(false);
 		}
 
 		commerceTermEntry.resetOriginalValues();
-
-		return commerceTermEntry;
-	}
-
-	/**
-	 * Returns the commerce term entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce term entry
-	 * @return the commerce term entry
-	 * @throws NoSuchTermEntryException if a commerce term entry with the primary key could not be found
-	 */
-	@Override
-	public CommerceTermEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTermEntryException {
-
-		CommerceTermEntry commerceTermEntry = fetchByPrimaryKey(primaryKey);
-
-		if (commerceTermEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTermEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return commerceTermEntry;
 	}
@@ -3679,187 +3467,6 @@ public class CommerceTermEntryPersistenceImpl
 	@Override
 	public CommerceTermEntry fetchByPrimaryKey(long commerceTermEntryId) {
 		return fetchByPrimaryKey((Serializable)commerceTermEntryId);
-	}
-
-	/**
-	 * Returns all the commerce term entries.
-	 *
-	 * @return the commerce term entries
-	 */
-	@Override
-	public List<CommerceTermEntry> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the commerce term entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommerceTermEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce term entries
-	 * @param end the upper bound of the range of commerce term entries (not inclusive)
-	 * @return the range of commerce term entries
-	 */
-	@Override
-	public List<CommerceTermEntry> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce term entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommerceTermEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce term entries
-	 * @param end the upper bound of the range of commerce term entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of commerce term entries
-	 */
-	@Override
-	public List<CommerceTermEntry> findAll(
-		int start, int end,
-		OrderByComparator<CommerceTermEntry> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the commerce term entries.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>CommerceTermEntryModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of commerce term entries
-	 * @param end the upper bound of the range of commerce term entries (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of commerce term entries
-	 */
-	@Override
-	public List<CommerceTermEntry> findAll(
-		int start, int end,
-		OrderByComparator<CommerceTermEntry> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<CommerceTermEntry> list = null;
-
-		if (useFinderCache) {
-			list = (List<CommerceTermEntry>)finderCache.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_COMMERCETERMENTRY);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_COMMERCETERMENTRY;
-
-				sql = sql.concat(CommerceTermEntryModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<CommerceTermEntry>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the commerce term entries from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (CommerceTermEntry commerceTermEntry : findAll()) {
-			remove(commerceTermEntry);
-		}
-	}
-
-	/**
-	 * Returns the number of commerce term entries.
-	 *
-	 * @return the number of commerce term entries
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)finderCache.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(_SQL_COUNT_COMMERCETERMENTRY);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
 	}
 
 	@Override
@@ -3892,21 +3499,6 @@ public class CommerceTermEntryPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -3917,20 +3509,20 @@ public class CommerceTermEntryPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 			_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"commerceTermEntry.", "uuid", FinderColumn.Type.STRING, "=",
 				true, true, CommerceTermEntry::getUuid));
@@ -3947,12 +3539,12 @@ public class CommerceTermEntryPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -3960,11 +3552,11 @@ public class CommerceTermEntryPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_COMMERCETERMENTRY_WHERE,
 				_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-				CommerceTermEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"commerceTermEntry.", "uuid", FinderColumn.Type.STRING, "=",
-					true, false, CommerceTermEntry::getUuid),
+					true, true, CommerceTermEntry::getUuid),
 				new FinderColumn<>(
 					"commerceTermEntry.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, CommerceTermEntry::getCompanyId));
@@ -3993,24 +3585,27 @@ public class CommerceTermEntryPersistenceImpl
 			_finderPathWithoutPaginationFindByC_A, _finderPathCountByC_A,
 			_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 			_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"commerceTermEntry.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, CommerceTermEntry::getCompanyId),
+				true, true, CommerceTermEntry::getCompanyId),
 			new FinderColumn<>(
 				"commerceTermEntry.", "active", FinderColumn.Type.BOOLEAN, "=",
 				true, true, CommerceTermEntry::isActive));
 
-		_finderPathFetchByC_N = new FinderPath(
+		_finderPathFetchByC_N = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByC_N",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"companyId", "name"}, true);
+			new String[] {"companyId", "name"}, 0, 2, false,
+			CommerceTermEntry::getCompanyId,
+			convertNullFunction(CommerceTermEntry::getName));
 
 		_uniquePersistenceFinderByC_N = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByC_N, _SQL_SELECT_COMMERCETERMENTRY_WHERE,
+			"",
 			new FinderColumn<>(
 				"commerceTermEntry.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, CommerceTermEntry::getCompanyId),
+				true, true, CommerceTermEntry::getCompanyId),
 			new FinderColumn<>(
 				"commerceTermEntry.", "name", FinderColumn.Type.STRING, "=",
 				true, true, CommerceTermEntry::getName));
@@ -4035,11 +3630,11 @@ public class CommerceTermEntryPersistenceImpl
 				_finderPathWithPaginationCountByC_LikeType,
 				_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 				_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-				CommerceTermEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"commerceTermEntry.", "companyId", FinderColumn.Type.LONG,
-					"=", true, false, CommerceTermEntry::getCompanyId),
+					"=", true, true, CommerceTermEntry::getCompanyId),
 				new FinderColumn<>(
 					"commerceTermEntry.", "type", FinderColumn.Type.STRING,
 					"LIKE", true, true, CommerceTermEntry::getType));
@@ -4063,10 +3658,10 @@ public class CommerceTermEntryPersistenceImpl
 			_finderPathWithPaginationCountByLtD_S,
 			_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 			_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"commerceTermEntry.", "displayDate", FinderColumn.Type.DATE,
-				"<", true, false, CommerceTermEntry::getDisplayDate),
+				"<", true, true, CommerceTermEntry::getDisplayDate),
 			new FinderColumn<>(
 				"commerceTermEntry.", "status", FinderColumn.Type.INTEGER, "=",
 				true, true, CommerceTermEntry::getStatus));
@@ -4090,10 +3685,10 @@ public class CommerceTermEntryPersistenceImpl
 			_finderPathWithPaginationCountByLtE_S,
 			_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 			_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"commerceTermEntry.", "expirationDate", FinderColumn.Type.DATE,
-				"<", true, false, CommerceTermEntry::getExpirationDate),
+				"<", true, true, CommerceTermEntry::getExpirationDate),
 			new FinderColumn<>(
 				"commerceTermEntry.", "status", FinderColumn.Type.INTEGER, "=",
 				true, true, CommerceTermEntry::getStatus));
@@ -4121,48 +3716,54 @@ public class CommerceTermEntryPersistenceImpl
 				_finderPathWithPaginationCountByC_A_LikeType,
 				_SQL_SELECT_COMMERCETERMENTRY_WHERE,
 				_SQL_COUNT_COMMERCETERMENTRY_WHERE,
-				CommerceTermEntryModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				CommerceTermEntryModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"commerceTermEntry.", "companyId", FinderColumn.Type.LONG,
-					"=", true, false, CommerceTermEntry::getCompanyId),
+					"=", true, true, CommerceTermEntry::getCompanyId),
 				new FinderColumn<>(
 					"commerceTermEntry.", "active", FinderColumn.Type.BOOLEAN,
-					"=", true, false, CommerceTermEntry::isActive),
+					"=", true, true, CommerceTermEntry::isActive),
 				new FinderColumn<>(
 					"commerceTermEntry.", "type", FinderColumn.Type.STRING,
 					"LIKE", true, true, CommerceTermEntry::getType));
 
-		_finderPathFetchByC_P_T = new FinderPath(
+		_finderPathFetchByC_P_T = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByC_P_T",
 			new String[] {
 				Long.class.getName(), Double.class.getName(),
 				String.class.getName()
 			},
-			new String[] {"companyId", "priority", "type_"}, true);
+			new String[] {"companyId", "priority", "type_"}, 0, 4, false,
+			CommerceTermEntry::getCompanyId, CommerceTermEntry::getPriority,
+			convertNullFunction(CommerceTermEntry::getType));
 
 		_uniquePersistenceFinderByC_P_T = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByC_P_T, _SQL_SELECT_COMMERCETERMENTRY_WHERE,
+			"",
 			new FinderColumn<>(
 				"commerceTermEntry.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, CommerceTermEntry::getCompanyId),
+				true, true, CommerceTermEntry::getCompanyId),
 			new FinderColumn<>(
 				"commerceTermEntry.", "priority", FinderColumn.Type.DOUBLE, "=",
-				true, false, CommerceTermEntry::getPriority),
+				true, true, CommerceTermEntry::getPriority),
 			new FinderColumn<>(
 				"commerceTermEntry.", "type", FinderColumn.Type.STRING, "=",
 				true, true, CommerceTermEntry::getType));
 
-		_finderPathFetchByERC_C = new FinderPath(
+		_finderPathFetchByERC_C = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "companyId"}, true);
+			new String[] {"externalReferenceCode", "companyId"}, 0, 1, false,
+			convertNullFunction(CommerceTermEntry::getExternalReferenceCode),
+			CommerceTermEntry::getCompanyId);
 
 		_uniquePersistenceFinderByERC_C = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByERC_C, _SQL_SELECT_COMMERCETERMENTRY_WHERE,
+			"",
 			new FinderColumn<>(
 				"commerceTermEntry.", "externalReferenceCode",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				CommerceTermEntry::getExternalReferenceCode),
 			new FinderColumn<>(
 				"commerceTermEntry.", "companyId", FinderColumn.Type.LONG, "=",
@@ -4214,14 +3815,14 @@ public class CommerceTermEntryPersistenceImpl
 	protected CTermEntryLocalizationPersistence
 		cTermEntryLocalizationPersistence;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		CommerceTermEntryModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_COMMERCETERMENTRY =
 		"SELECT commerceTermEntry FROM CommerceTermEntry commerceTermEntry";
 
 	private static final String _SQL_SELECT_COMMERCETERMENTRY_WHERE =
 		"SELECT commerceTermEntry FROM CommerceTermEntry commerceTermEntry WHERE ";
-
-	private static final String _SQL_COUNT_COMMERCETERMENTRY =
-		"SELECT COUNT(commerceTermEntry) FROM CommerceTermEntry commerceTermEntry";
 
 	private static final String _SQL_COUNT_COMMERCETERMENTRY_WHERE =
 		"SELECT COUNT(commerceTermEntry) FROM CommerceTermEntry commerceTermEntry WHERE ";
@@ -4247,12 +3848,7 @@ public class CommerceTermEntryPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "CommerceTermEntry";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "commerceTermEntry.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "CommerceTermEntry.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommerceTermEntry exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommerceTermEntry exists with the key {";
@@ -4269,4 +3865,4 @@ public class CommerceTermEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1045849069
+// LIFERAY-SERVICE-BUILDER-HASH:2046735339

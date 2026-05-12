@@ -11,7 +11,6 @@ import com.liferay.portal.kernel.dao.orm.EntityCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -31,10 +30,7 @@ import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinder;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.model.impl.LayoutSetBranchImpl;
@@ -61,7 +57,7 @@ import java.util.Set;
  * @generated
  */
 public class LayoutSetBranchPersistenceImpl
-	extends BasePersistenceImpl<LayoutSetBranch>
+	extends BasePersistenceImpl<LayoutSetBranch, NoSuchLayoutSetBranchException>
 	implements LayoutSetBranchPersistence {
 
 	/*
@@ -78,9 +74,6 @@ public class LayoutSetBranchPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByGroupId;
 	private FinderPath _finderPathWithoutPaginationFindByGroupId;
 	private FinderPath _finderPathCountByGroupId;
@@ -296,7 +289,7 @@ public class LayoutSetBranchPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -667,7 +660,7 @@ public class LayoutSetBranchPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1175,7 +1168,7 @@ public class LayoutSetBranchPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1359,110 +1352,6 @@ public class LayoutSetBranchPersistenceImpl
 	}
 
 	/**
-	 * Caches the layout set branch in the entity cache if it is enabled.
-	 *
-	 * @param layoutSetBranch the layout set branch
-	 */
-	@Override
-	public void cacheResult(LayoutSetBranch layoutSetBranch) {
-		EntityCacheUtil.putResult(
-			LayoutSetBranchImpl.class, layoutSetBranch.getPrimaryKey(),
-			layoutSetBranch);
-
-		FinderCacheUtil.putResult(
-			_finderPathFetchByG_P_N,
-			new Object[] {
-				layoutSetBranch.getGroupId(), layoutSetBranch.isPrivateLayout(),
-				layoutSetBranch.getName()
-			},
-			layoutSetBranch);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the layout set branches in the entity cache if it is enabled.
-	 *
-	 * @param layoutSetBranchs the layout set branches
-	 */
-	@Override
-	public void cacheResult(List<LayoutSetBranch> layoutSetBranchs) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (layoutSetBranchs.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (LayoutSetBranch layoutSetBranch : layoutSetBranchs) {
-			if (EntityCacheUtil.getResult(
-					LayoutSetBranchImpl.class,
-					layoutSetBranch.getPrimaryKey()) == null) {
-
-				cacheResult(layoutSetBranch);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all layout set branches.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(LayoutSetBranchImpl.class);
-
-		FinderCacheUtil.clearCache(LayoutSetBranchImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout set branch.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(LayoutSetBranch layoutSetBranch) {
-		EntityCacheUtil.removeResult(
-			LayoutSetBranchImpl.class, layoutSetBranch);
-	}
-
-	@Override
-	public void clearCache(List<LayoutSetBranch> layoutSetBranchs) {
-		for (LayoutSetBranch layoutSetBranch : layoutSetBranchs) {
-			EntityCacheUtil.removeResult(
-				LayoutSetBranchImpl.class, layoutSetBranch);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(LayoutSetBranchImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(LayoutSetBranchImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		LayoutSetBranchModelImpl layoutSetBranchModelImpl) {
-
-		Object[] args = new Object[] {
-			layoutSetBranchModelImpl.getGroupId(),
-			layoutSetBranchModelImpl.isPrivateLayout(),
-			layoutSetBranchModelImpl.getName()
-		};
-
-		FinderCacheUtil.putResult(
-			_finderPathFetchByG_P_N, args, layoutSetBranchModelImpl);
-	}
-
-	/**
 	 * Creates a new layout set branch with the primary key. Does not add the layout set branch to the database.
 	 *
 	 * @param layoutSetBranchId the primary key for the new layout set branch
@@ -1492,47 +1381,6 @@ public class LayoutSetBranchPersistenceImpl
 		throws NoSuchLayoutSetBranchException {
 
 		return remove((Serializable)layoutSetBranchId);
-	}
-
-	/**
-	 * Removes the layout set branch with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout set branch
-	 * @return the layout set branch that was removed
-	 * @throws NoSuchLayoutSetBranchException if a layout set branch with the primary key could not be found
-	 */
-	@Override
-	public LayoutSetBranch remove(Serializable primaryKey)
-		throws NoSuchLayoutSetBranchException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutSetBranch layoutSetBranch = (LayoutSetBranch)session.get(
-				LayoutSetBranchImpl.class, primaryKey);
-
-			if (layoutSetBranch == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutSetBranchException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutSetBranch);
-		}
-		catch (NoSuchLayoutSetBranchException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1635,41 +1483,13 @@ public class LayoutSetBranchPersistenceImpl
 			closeSession(session);
 		}
 
-		EntityCacheUtil.putResult(
-			LayoutSetBranchImpl.class, layoutSetBranchModelImpl, false, true);
-
-		cacheUniqueFindersCache(layoutSetBranchModelImpl);
+		cacheUniqueFindersResult(layoutSetBranch, false);
 
 		if (isNew) {
 			layoutSetBranch.setNew(false);
 		}
 
 		layoutSetBranch.resetOriginalValues();
-
-		return layoutSetBranch;
-	}
-
-	/**
-	 * Returns the layout set branch with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout set branch
-	 * @return the layout set branch
-	 * @throws NoSuchLayoutSetBranchException if a layout set branch with the primary key could not be found
-	 */
-	@Override
-	public LayoutSetBranch findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutSetBranchException {
-
-		LayoutSetBranch layoutSetBranch = fetchByPrimaryKey(primaryKey);
-
-		if (layoutSetBranch == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutSetBranchException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return layoutSetBranch;
 	}
@@ -1697,187 +1517,6 @@ public class LayoutSetBranchPersistenceImpl
 	@Override
 	public LayoutSetBranch fetchByPrimaryKey(long layoutSetBranchId) {
 		return fetchByPrimaryKey((Serializable)layoutSetBranchId);
-	}
-
-	/**
-	 * Returns all the layout set branches.
-	 *
-	 * @return the layout set branches
-	 */
-	@Override
-	public List<LayoutSetBranch> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the layout set branches.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetBranchModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set branches
-	 * @param end the upper bound of the range of layout set branches (not inclusive)
-	 * @return the range of layout set branches
-	 */
-	@Override
-	public List<LayoutSetBranch> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the layout set branches.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetBranchModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set branches
-	 * @param end the upper bound of the range of layout set branches (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of layout set branches
-	 */
-	@Override
-	public List<LayoutSetBranch> findAll(
-		int start, int end,
-		OrderByComparator<LayoutSetBranch> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the layout set branches.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>LayoutSetBranchModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of layout set branches
-	 * @param end the upper bound of the range of layout set branches (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of layout set branches
-	 */
-	@Override
-	public List<LayoutSetBranch> findAll(
-		int start, int end,
-		OrderByComparator<LayoutSetBranch> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<LayoutSetBranch> list = null;
-
-		if (useFinderCache) {
-			list = (List<LayoutSetBranch>)FinderCacheUtil.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_LAYOUTSETBRANCH);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_LAYOUTSETBRANCH;
-
-				sql = sql.concat(LayoutSetBranchModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<LayoutSetBranch>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					FinderCacheUtil.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the layout set branches from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (LayoutSetBranch layoutSetBranch : findAll()) {
-			remove(layoutSetBranch);
-		}
-	}
-
-	/**
-	 * Returns the number of layout set branches.
-	 *
-	 * @return the number of layout set branches
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)FinderCacheUtil.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(_SQL_COUNT_LAYOUTSETBRANCH);
-
-				count = (Long)query.uniqueResult();
-
-				FinderCacheUtil.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
 	}
 
 	@Override
@@ -1909,21 +1548,6 @@ public class LayoutSetBranchPersistenceImpl
 	 * Initializes the layout set branch persistence.
 	 */
 	public void afterPropertiesSet() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByGroupId = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByGroupId",
 			new String[] {
@@ -1948,7 +1572,8 @@ public class LayoutSetBranchPersistenceImpl
 				_finderPathWithoutPaginationFindByGroupId,
 				_finderPathCountByGroupId, _SQL_SELECT_LAYOUTSETBRANCH_WHERE,
 				_SQL_COUNT_LAYOUTSETBRANCH_WHERE,
-				LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"layoutSetBranch.", "groupId", FinderColumn.Type.LONG, "=",
 					true, true, LayoutSetBranch::getGroupId));
@@ -1976,30 +1601,33 @@ public class LayoutSetBranchPersistenceImpl
 			this, _finderPathWithPaginationFindByG_P,
 			_finderPathWithoutPaginationFindByG_P, _finderPathCountByG_P,
 			_SQL_SELECT_LAYOUTSETBRANCH_WHERE, _SQL_COUNT_LAYOUTSETBRANCH_WHERE,
-			LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"layoutSetBranch.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, LayoutSetBranch::getGroupId),
+				true, true, LayoutSetBranch::getGroupId),
 			new FinderColumn<>(
 				"layoutSetBranch.", "privateLayout", FinderColumn.Type.BOOLEAN,
 				"=", true, true, LayoutSetBranch::isPrivateLayout));
 
-		_finderPathFetchByG_P_N = new FinderPath(
+		_finderPathFetchByG_P_N = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByG_P_N",
 			new String[] {
 				Long.class.getName(), Boolean.class.getName(),
 				String.class.getName()
 			},
-			new String[] {"groupId", "privateLayout", "name"}, true);
+			new String[] {"groupId", "privateLayout", "name"}, 0, 4, false,
+			LayoutSetBranch::getGroupId, LayoutSetBranch::isPrivateLayout,
+			convertNullFunction(LayoutSetBranch::getName));
 
 		_uniquePersistenceFinderByG_P_N = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByG_P_N, _SQL_SELECT_LAYOUTSETBRANCH_WHERE,
+			"",
 			new FinderColumn<>(
 				"layoutSetBranch.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, LayoutSetBranch::getGroupId),
+				true, true, LayoutSetBranch::getGroupId),
 			new FinderColumn<>(
 				"layoutSetBranch.", "privateLayout", FinderColumn.Type.BOOLEAN,
-				"=", true, false, LayoutSetBranch::isPrivateLayout),
+				"=", true, true, LayoutSetBranch::isPrivateLayout),
 			new FinderColumn<>(
 				"layoutSetBranch.", "name", FinderColumn.Type.STRING, "=", true,
 				true, LayoutSetBranch::getName));
@@ -2033,13 +1661,13 @@ public class LayoutSetBranchPersistenceImpl
 			this, _finderPathWithPaginationFindByG_P_M,
 			_finderPathWithoutPaginationFindByG_P_M, _finderPathCountByG_P_M,
 			_SQL_SELECT_LAYOUTSETBRANCH_WHERE, _SQL_COUNT_LAYOUTSETBRANCH_WHERE,
-			LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			LayoutSetBranchModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"layoutSetBranch.", "groupId", FinderColumn.Type.LONG, "=",
-				true, false, LayoutSetBranch::getGroupId),
+				true, true, LayoutSetBranch::getGroupId),
 			new FinderColumn<>(
 				"layoutSetBranch.", "privateLayout", FinderColumn.Type.BOOLEAN,
-				"=", true, false, LayoutSetBranch::isPrivateLayout),
+				"=", true, true, LayoutSetBranch::isPrivateLayout),
 			new FinderColumn<>(
 				"layoutSetBranch.", "master", FinderColumn.Type.BOOLEAN, "=",
 				true, true, LayoutSetBranch::isMaster));
@@ -2053,14 +1681,14 @@ public class LayoutSetBranchPersistenceImpl
 		EntityCacheUtil.removeCache(LayoutSetBranchImpl.class.getName());
 	}
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		LayoutSetBranchModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_LAYOUTSETBRANCH =
 		"SELECT layoutSetBranch FROM LayoutSetBranch layoutSetBranch";
 
 	private static final String _SQL_SELECT_LAYOUTSETBRANCH_WHERE =
 		"SELECT layoutSetBranch FROM LayoutSetBranch layoutSetBranch WHERE ";
-
-	private static final String _SQL_COUNT_LAYOUTSETBRANCH =
-		"SELECT COUNT(layoutSetBranch) FROM LayoutSetBranch layoutSetBranch";
 
 	private static final String _SQL_COUNT_LAYOUTSETBRANCH_WHERE =
 		"SELECT COUNT(layoutSetBranch) FROM LayoutSetBranch layoutSetBranch WHERE ";
@@ -2086,12 +1714,7 @@ public class LayoutSetBranchPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "LayoutSetBranch";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "layoutSetBranch.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "LayoutSetBranch.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutSetBranch exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutSetBranch exists with the key {";
@@ -2108,4 +1731,4 @@ public class LayoutSetBranchPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-3806325
+// LIFERAY-SERVICE-BUILDER-HASH:472682246

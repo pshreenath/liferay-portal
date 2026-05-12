@@ -7,7 +7,7 @@ name: format-source
 
 # Format Source
 
-All the code is strictly formatted using the source formatter. This is how it works:
+All the code is strictly formatted using the source formatter (Java, JavaScript, JSON, JSP, Markdown, properties, shell, XML, YAML, and others). This is how it works:
 
 Run for a specific module:
 
@@ -20,6 +20,8 @@ Run across the entire codebase:
 ```bash
 cd <repo-root>/portal-impl && ant format-source-current-branch
 ```
+
+`ant format-source-current-branch` only inspects committed files, so run it after creating the commit, and amend any formatter changes or fixes into that commit.
 
 In both cases, if there are issues to be fixed, the formatter will list them. Fix them.
 
@@ -371,6 +373,8 @@ When the value is reused for a second lookup in the same scope, reassign `index`
 +foo.setGamma(gamma);
 ```
 
+**Exception:** When the receiver is a Service Builder entity (anything backed by a `*ModelImpl` — `FragmentEntryVersion`, `User`, `Group`, etc.), the automatic formatter's `JavaServiceObjectCheck` rewrites the setter block into model-field declaration order, not alphabetical order. Leave entity setter blocks as the formatter produces them; alphabetizing by hand will be reverted on the next `formatSource` run.
+
 ### Rule 18: Use Complete Sentences in User-Facing Messages
 
 **Why:** Status, error, and notification strings that omit the linking verb read as fragments and translate poorly; restoring the auxiliary (`is`, `are`, `was`, `were`) turns the message into a complete sentence and matches the dominant phrasing already used across language files, log statements, and shell echoes.
@@ -396,4 +400,28 @@ It applies to workflow and other YAML scripted output.
 ```diff
 -                        echo "No entries found for ${id}."
 +                        echo "No entries were found for ${id}."
+```
+
+### Rule 19: Use "Delete" for Helpers That Delete Entities
+
+**Why:** Liferay's persistence APIs spell entity destruction as `delete*` (`deleteUser`, `deleteEntry`); naming a private helper `_delete*` when its body calls a `delete*` service keeps the helper's verb aligned with the operation it performs.
+
+**Examples:**
+
+```diff
+-private void _removeStaleFoos(Map<Long, List<String>> deletedIdsMap)
++private void _deleteStaleFoos(Map<Long, List<String>> deletedIdsMap)
+ 		throws Exception {
+
+ 	...
+
+ 	_fooLocalService.deleteFoo(foo);
+ }
+```
+
+Update the call sites at the same time.
+
+```diff
+-_removeStaleFoos(deletedIdsMap);
++_deleteStaleFoos(deletedIdsMap);
 ```

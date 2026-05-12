@@ -15,14 +15,12 @@ import com.liferay.document.library.kernel.service.persistence.DLFolderUtil;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.bean.BeanReference;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.EntityCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -38,6 +36,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -50,8 +49,6 @@ import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -69,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +82,8 @@ import java.util.Set;
  * @generated
  */
 public class DLFolderPersistenceImpl
-	extends BasePersistenceImpl<DLFolder> implements DLFolderPersistence {
+	extends BasePersistenceImpl<DLFolder, NoSuchFolderException>
+	implements DLFolderPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -102,9 +99,6 @@ public class DLFolderPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -735,7 +729,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1418,7 +1412,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2623,7 +2617,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3366,7 +3360,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3827,7 +3821,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -4296,7 +4290,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -4770,7 +4764,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -5267,7 +5261,7 @@ public class DLFolderPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -5596,162 +5590,6 @@ public class DLFolderPersistenceImpl
 	}
 
 	/**
-	 * Caches the document library folder in the entity cache if it is enabled.
-	 *
-	 * @param dlFolder the document library folder
-	 */
-	@Override
-	public void cacheResult(DLFolder dlFolder) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					dlFolder.getCtCollectionId())) {
-
-			EntityCacheUtil.putResult(
-				DLFolderImpl.class, dlFolder.getPrimaryKey(), dlFolder);
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByUUID_G,
-				new Object[] {dlFolder.getUuid(), dlFolder.getGroupId()},
-				dlFolder);
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByR_M,
-				new Object[] {
-					dlFolder.getRepositoryId(), dlFolder.isMountPoint()
-				},
-				dlFolder);
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByG_P_N,
-				new Object[] {
-					dlFolder.getGroupId(), dlFolder.getParentFolderId(),
-					dlFolder.getName()
-				},
-				dlFolder);
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByERC_G,
-				new Object[] {
-					dlFolder.getExternalReferenceCode(), dlFolder.getGroupId()
-				},
-				dlFolder);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the document library folders in the entity cache if it is enabled.
-	 *
-	 * @param dlFolders the document library folders
-	 */
-	@Override
-	public void cacheResult(List<DLFolder> dlFolders) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (dlFolders.size() > _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (DLFolder dlFolder : dlFolders) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						dlFolder.getCtCollectionId())) {
-
-				if (EntityCacheUtil.getResult(
-						DLFolderImpl.class, dlFolder.getPrimaryKey()) == null) {
-
-					cacheResult(dlFolder);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all document library folders.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(DLFolderImpl.class);
-
-		FinderCacheUtil.clearCache(DLFolderImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the document library folder.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFolder dlFolder) {
-		EntityCacheUtil.removeResult(DLFolderImpl.class, dlFolder);
-	}
-
-	@Override
-	public void clearCache(List<DLFolder> dlFolders) {
-		for (DLFolder dlFolder : dlFolders) {
-			EntityCacheUtil.removeResult(DLFolderImpl.class, dlFolder);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(DLFolderImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(DLFolderImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		DLFolderModelImpl dlFolderModelImpl) {
-
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					dlFolderModelImpl.getCtCollectionId())) {
-
-			Object[] args = new Object[] {
-				dlFolderModelImpl.getUuid(), dlFolderModelImpl.getGroupId()
-			};
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByUUID_G, args, dlFolderModelImpl);
-
-			args = new Object[] {
-				dlFolderModelImpl.getRepositoryId(),
-				dlFolderModelImpl.isMountPoint()
-			};
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByR_M, args, dlFolderModelImpl);
-
-			args = new Object[] {
-				dlFolderModelImpl.getGroupId(),
-				dlFolderModelImpl.getParentFolderId(),
-				dlFolderModelImpl.getName()
-			};
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByG_P_N, args, dlFolderModelImpl);
-
-			args = new Object[] {
-				dlFolderModelImpl.getExternalReferenceCode(),
-				dlFolderModelImpl.getGroupId()
-			};
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByERC_G, args, dlFolderModelImpl);
-		}
-	}
-
-	/**
 	 * Creates a new document library folder with the primary key. Does not add the document library folder to the database.
 	 *
 	 * @param folderId the primary key for the new document library folder
@@ -5783,47 +5621,6 @@ public class DLFolderPersistenceImpl
 	@Override
 	public DLFolder remove(long folderId) throws NoSuchFolderException {
 		return remove((Serializable)folderId);
-	}
-
-	/**
-	 * Removes the document library folder with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder that was removed
-	 * @throws NoSuchFolderException if a document library folder with the primary key could not be found
-	 */
-	@Override
-	public DLFolder remove(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFolder dlFolder = (DLFolder)session.get(
-				DLFolderImpl.class, primaryKey);
-
-			if (dlFolder == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFolderException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFolder);
-		}
-		catch (NoSuchFolderException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -5996,41 +5793,13 @@ public class DLFolderPersistenceImpl
 			closeSession(session);
 		}
 
-		EntityCacheUtil.putResult(
-			DLFolderImpl.class, dlFolderModelImpl, false, true);
-
-		cacheUniqueFindersCache(dlFolderModelImpl);
+		cacheUniqueFindersResult(dlFolder, false);
 
 		if (isNew) {
 			dlFolder.setNew(false);
 		}
 
 		dlFolder.resetOriginalValues();
-
-		return dlFolder;
-	}
-
-	/**
-	 * Returns the document library folder with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder
-	 * @throws NoSuchFolderException if a document library folder with the primary key could not be found
-	 */
-	@Override
-	public DLFolder findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		DLFolder dlFolder = fetchByPrimaryKey(primaryKey);
-
-		if (dlFolder == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFolderException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return dlFolder;
 	}
@@ -6049,51 +5818,9 @@ public class DLFolderPersistenceImpl
 		return findByPrimaryKey((Serializable)folderId);
 	}
 
-	/**
-	 * Returns the document library folder with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder, or <code>null</code> if a document library folder with the primary key could not be found
-	 */
 	@Override
-	public DLFolder fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFolder.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFolder dlFolder = (DLFolder)EntityCacheUtil.getResult(
-			DLFolderImpl.class, primaryKey);
-
-		if (dlFolder != null) {
-			return dlFolder;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFolder = (DLFolder)session.get(DLFolderImpl.class, primaryKey);
-
-			if (dlFolder != null) {
-				cacheResult(dlFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFolder;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -6105,317 +5832,6 @@ public class DLFolderPersistenceImpl
 	@Override
 	public DLFolder fetchByPrimaryKey(long folderId) {
 		return fetchByPrimaryKey((Serializable)folderId);
-	}
-
-	@Override
-	public Map<Serializable, DLFolder> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(DLFolder.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFolder> map = new HashMap<Serializable, DLFolder>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFolder dlFolder = fetchByPrimaryKey(primaryKey);
-
-			if (dlFolder != null) {
-				map.put(primaryKey, dlFolder);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						DLFolder.class, primaryKey)) {
-
-				DLFolder dlFolder = (DLFolder)EntityCacheUtil.getResult(
-					DLFolderImpl.class, primaryKey);
-
-				if (dlFolder == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFolder);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFolder dlFolder : (List<DLFolder>)query.list()) {
-				map.put(dlFolder.getPrimaryKeyObj(), dlFolder);
-
-				cacheResult(dlFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the document library folders.
-	 *
-	 * @return the document library folders
-	 */
-	@Override
-	public List<DLFolder> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the document library folders.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DLFolderModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of document library folders
-	 * @param end the upper bound of the range of document library folders (not inclusive)
-	 * @return the range of document library folders
-	 */
-	@Override
-	public List<DLFolder> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the document library folders.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DLFolderModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of document library folders
-	 * @param end the upper bound of the range of document library folders (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of document library folders
-	 */
-	@Override
-	public List<DLFolder> findAll(
-		int start, int end, OrderByComparator<DLFolder> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the document library folders.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DLFolderModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of document library folders
-	 * @param end the upper bound of the range of document library folders (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of document library folders
-	 */
-	@Override
-	public List<DLFolder> findAll(
-		int start, int end, OrderByComparator<DLFolder> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					DLFolder.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<DLFolder> list = null;
-
-			if (useFinderCache) {
-				list = (List<DLFolder>)FinderCacheUtil.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_DLFOLDER);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_DLFOLDER;
-
-					sql = sql.concat(DLFolderModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<DLFolder>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						FinderCacheUtil.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the document library folders from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (DLFolder dlFolder : findAll()) {
-			remove(dlFolder);
-		}
-	}
-
-	/**
-	 * Returns the number of document library folders.
-	 *
-	 * @return the number of document library folders
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					DLFolder.class)) {
-
-			Long count = (Long)FinderCacheUtil.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(_SQL_COUNT_DLFOLDER);
-
-					count = (Long)query.uniqueResult();
-
-					FinderCacheUtil.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	/**
@@ -6885,25 +6301,10 @@ public class DLFolderPersistenceImpl
 	 * Initializes the document library folder persistence.
 	 */
 	public void afterPropertiesSet() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
 		dlFolderToDLFileEntryTypeTableMapper =
 			TableMapperFactory.getTableMapper(
 				"DLFileEntryTypes_DLFolders", "companyId", "folderId",
 				"fileEntryTypeId", this, dlFileEntryTypePersistence);
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
 
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
@@ -6915,32 +6316,33 @@ public class DLFolderPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-			DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"dlFolder.", "uuid", FinderColumn.Type.STRING, "=", true, true,
 				DLFolder::getUuid));
 
-		_finderPathFetchByUUID_G = new FinderPath(
+		_finderPathFetchByUUID_G = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByUUID_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "groupId"}, true);
+			new String[] {"uuid_", "groupId"}, 0, 1, false,
+			convertNullFunction(DLFolder::getUuid), DLFolder::getGroupId);
 
 		_uniquePersistenceFinderByUUID_G = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByUUID_G, _SQL_SELECT_DLFOLDER_WHERE,
+			this, _finderPathFetchByUUID_G, _SQL_SELECT_DLFOLDER_WHERE, "",
 			new FinderColumn<>(
-				"dlFolder.", "uuid", FinderColumn.Type.STRING, "=", true, false,
+				"dlFolder.", "uuid", FinderColumn.Type.STRING, "=", true, true,
 				DLFolder::getUuid),
 			new FinderColumn<>(
 				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true, true,
@@ -6958,12 +6360,12 @@ public class DLFolderPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -6971,10 +6373,10 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "uuid", FinderColumn.Type.STRING, "=", true,
-					false, DLFolder::getUuid),
+					true, DLFolder::getUuid),
 				new FinderColumn<>(
 					"dlFolder.", "companyId", FinderColumn.Type.LONG, "=", true,
 					true, DLFolder::getCompanyId));
@@ -7003,7 +6405,7 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByGroupId,
 				_finderPathCountByGroupId, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
 					true, DLFolder::getGroupId));
@@ -7032,7 +6434,7 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByCompanyId,
 				_finderPathCountByCompanyId, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "companyId", FinderColumn.Type.LONG, "=", true,
 					true, DLFolder::getCompanyId));
@@ -7061,7 +6463,7 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByRepositoryId,
 				_finderPathCountByRepositoryId, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "repositoryId", FinderColumn.Type.LONG, "=",
 					true, true, DLFolder::getRepositoryId));
@@ -7089,10 +6491,10 @@ public class DLFolderPersistenceImpl
 			this, _finderPathWithPaginationFindByG_P,
 			_finderPathWithoutPaginationFindByG_P, _finderPathCountByG_P,
 			_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-			DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
-				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, DLFolder::getGroupId),
+				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true, true,
+				DLFolder::getGroupId),
 			new FinderColumn<>(
 				"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
 				true, true, DLFolder::getParentFolderId));
@@ -7116,24 +6518,25 @@ public class DLFolderPersistenceImpl
 				this, _finderPathWithPaginationFindByC_NotS, null,
 				_finderPathWithPaginationCountByC_NotS,
 				_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-				DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "companyId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getCompanyId),
+					true, DLFolder::getCompanyId),
 				new FinderColumn<>(
 					"dlFolder.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, DLFolder::getStatus));
 
-		_finderPathFetchByR_M = new FinderPath(
+		_finderPathFetchByR_M = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByR_M",
 			new String[] {Long.class.getName(), Boolean.class.getName()},
-			new String[] {"repositoryId", "mountPoint"}, true);
+			new String[] {"repositoryId", "mountPoint"}, 0, 0, false,
+			DLFolder::getRepositoryId, DLFolder::isMountPoint);
 
 		_uniquePersistenceFinderByR_M = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByR_M, _SQL_SELECT_DLFOLDER_WHERE,
+			this, _finderPathFetchByR_M, _SQL_SELECT_DLFOLDER_WHERE, "",
 			new FinderColumn<>(
 				"dlFolder.", "repositoryId", FinderColumn.Type.LONG, "=", true,
-				false, DLFolder::getRepositoryId),
+				true, DLFolder::getRepositoryId),
 			new FinderColumn<>(
 				"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=", true,
 				true, DLFolder::isMountPoint));
@@ -7161,10 +6564,10 @@ public class DLFolderPersistenceImpl
 			this, _finderPathWithPaginationFindByR_P,
 			_finderPathWithoutPaginationFindByR_P, _finderPathCountByR_P,
 			_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-			DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"dlFolder.", "repositoryId", FinderColumn.Type.LONG, "=", true,
-				false, DLFolder::getRepositoryId),
+				true, DLFolder::getRepositoryId),
 			new FinderColumn<>(
 				"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
 				true, true, DLFolder::getParentFolderId));
@@ -7181,21 +6584,21 @@ public class DLFolderPersistenceImpl
 		_finderPathWithoutPaginationFindByP_N = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByP_N",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"parentFolderId", "name"}, true);
+			new String[] {"parentFolderId", "name"}, 0, 2, true, null);
 
 		_finderPathCountByP_N = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByP_N",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"parentFolderId", "name"}, false);
+			new String[] {"parentFolderId", "name"}, 0, 2, false, null);
 
 		_collectionPersistenceFinderByP_N = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByP_N,
 			_finderPathWithoutPaginationFindByP_N, _finderPathCountByP_N,
 			_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-			DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-				true, false, DLFolder::getParentFolderId),
+				true, true, DLFolder::getParentFolderId),
 			new FinderColumn<>(
 				"dlFolder.", "name", FinderColumn.Type.STRING, "=", true, true,
 				DLFolder::getName));
@@ -7221,13 +6624,13 @@ public class DLFolderPersistenceImpl
 				this, _finderPathWithPaginationFindByGtF_C_P, null,
 				_finderPathWithPaginationCountByGtF_C_P,
 				_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-				DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "folderId", FinderColumn.Type.LONG, ">", true,
-					false, DLFolder::getFolderId),
+					true, DLFolder::getFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "companyId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getCompanyId),
+					true, DLFolder::getCompanyId),
 				new FinderColumn<>(
 					"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
 					true, true, DLFolder::getParentFolderId));
@@ -7261,33 +6664,35 @@ public class DLFolderPersistenceImpl
 			this, _finderPathWithPaginationFindByG_M_P,
 			_finderPathWithoutPaginationFindByG_M_P, _finderPathCountByG_M_P,
 			_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-			DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
-				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, DLFolder::getGroupId),
+				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true, true,
+				DLFolder::getGroupId),
 			new FinderColumn<>(
 				"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=", true,
-				false, DLFolder::isMountPoint),
+				true, DLFolder::isMountPoint),
 			new FinderColumn<>(
 				"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
 				true, true, DLFolder::getParentFolderId));
 
-		_finderPathFetchByG_P_N = new FinderPath(
+		_finderPathFetchByG_P_N = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByG_P_N",
 			new String[] {
 				Long.class.getName(), Long.class.getName(),
 				String.class.getName()
 			},
-			new String[] {"groupId", "parentFolderId", "name"}, true);
+			new String[] {"groupId", "parentFolderId", "name"}, 0, 4, false,
+			DLFolder::getGroupId, DLFolder::getParentFolderId,
+			convertNullFunction(DLFolder::getName));
 
 		_uniquePersistenceFinderByG_P_N = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByG_P_N, _SQL_SELECT_DLFOLDER_WHERE,
+			this, _finderPathFetchByG_P_N, _SQL_SELECT_DLFOLDER_WHERE, "",
 			new FinderColumn<>(
-				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, DLFolder::getGroupId),
+				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true, true,
+				DLFolder::getGroupId),
 			new FinderColumn<>(
 				"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-				true, false, DLFolder::getParentFolderId),
+				true, true, DLFolder::getParentFolderId),
 			new FinderColumn<>(
 				"dlFolder.", "name", FinderColumn.Type.STRING, "=", true, true,
 				DLFolder::getName));
@@ -7317,16 +6722,16 @@ public class DLFolderPersistenceImpl
 				this, _finderPathWithPaginationFindByGtF_C_P_NotS, null,
 				_finderPathWithPaginationCountByGtF_C_P_NotS,
 				_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-				DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "folderId", FinderColumn.Type.LONG, ">", true,
-					false, DLFolder::getFolderId),
+					true, DLFolder::getFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "companyId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getCompanyId),
+					true, DLFolder::getCompanyId),
 				new FinderColumn<>(
 					"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-					true, false, DLFolder::getParentFolderId),
+					true, true, DLFolder::getParentFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, DLFolder::getStatus));
@@ -7366,16 +6771,16 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByG_M_P_H,
 				_finderPathCountByG_M_P_H, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getGroupId),
+					true, DLFolder::getGroupId),
 				new FinderColumn<>(
 					"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=",
-					true, false, DLFolder::isMountPoint),
+					true, true, DLFolder::isMountPoint),
 				new FinderColumn<>(
 					"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-					true, false, DLFolder::getParentFolderId),
+					true, true, DLFolder::getParentFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "hidden", FinderColumn.Type.BOOLEAN, "=", true,
 					true, DLFolder::isHidden));
@@ -7405,16 +6810,16 @@ public class DLFolderPersistenceImpl
 				this, _finderPathWithPaginationFindByG_M_LikeT_H, null,
 				_finderPathWithPaginationCountByG_M_LikeT_H,
 				_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-				DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getGroupId),
+					true, DLFolder::getGroupId),
 				new FinderColumn<>(
 					"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=",
-					true, false, DLFolder::isMountPoint),
+					true, true, DLFolder::isMountPoint),
 				new FinderColumn<>(
 					"dlFolder.", "treePath", FinderColumn.Type.STRING, "LIKE",
-					true, false, DLFolder::getTreePath),
+					true, true, DLFolder::getTreePath),
 				new FinderColumn<>(
 					"dlFolder.", "hidden", FinderColumn.Type.BOOLEAN, "=", true,
 					true, DLFolder::isHidden));
@@ -7454,16 +6859,16 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByG_P_H_S,
 				_finderPathCountByG_P_H_S, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getGroupId),
+					true, DLFolder::getGroupId),
 				new FinderColumn<>(
 					"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-					true, false, DLFolder::getParentFolderId),
+					true, true, DLFolder::getParentFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "hidden", FinderColumn.Type.BOOLEAN, "=", true,
-					false, DLFolder::isHidden),
+					true, DLFolder::isHidden),
 				new FinderColumn<>(
 					"dlFolder.", "status", FinderColumn.Type.INTEGER, "=", true,
 					true, DLFolder::getStatus));
@@ -7511,19 +6916,19 @@ public class DLFolderPersistenceImpl
 				_finderPathWithoutPaginationFindByG_M_P_H_S,
 				_finderPathCountByG_M_P_H_S, _SQL_SELECT_DLFOLDER_WHERE,
 				_SQL_COUNT_DLFOLDER_WHERE, DLFolderModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getGroupId),
+					true, DLFolder::getGroupId),
 				new FinderColumn<>(
 					"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=",
-					true, false, DLFolder::isMountPoint),
+					true, true, DLFolder::isMountPoint),
 				new FinderColumn<>(
 					"dlFolder.", "parentFolderId", FinderColumn.Type.LONG, "=",
-					true, false, DLFolder::getParentFolderId),
+					true, true, DLFolder::getParentFolderId),
 				new FinderColumn<>(
 					"dlFolder.", "hidden", FinderColumn.Type.BOOLEAN, "=", true,
-					false, DLFolder::isHidden),
+					true, DLFolder::isHidden),
 				new FinderColumn<>(
 					"dlFolder.", "status", FinderColumn.Type.INTEGER, "=", true,
 					true, DLFolder::getStatus));
@@ -7558,33 +6963,35 @@ public class DLFolderPersistenceImpl
 				this, _finderPathWithPaginationFindByG_M_LikeT_H_NotS, null,
 				_finderPathWithPaginationCountByG_M_LikeT_H_NotS,
 				_SQL_SELECT_DLFOLDER_WHERE, _SQL_COUNT_DLFOLDER_WHERE,
-				DLFolderModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DLFolderModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true,
-					false, DLFolder::getGroupId),
+					true, DLFolder::getGroupId),
 				new FinderColumn<>(
 					"dlFolder.", "mountPoint", FinderColumn.Type.BOOLEAN, "=",
-					true, false, DLFolder::isMountPoint),
+					true, true, DLFolder::isMountPoint),
 				new FinderColumn<>(
 					"dlFolder.", "treePath", FinderColumn.Type.STRING, "LIKE",
-					true, false, DLFolder::getTreePath),
+					true, true, DLFolder::getTreePath),
 				new FinderColumn<>(
 					"dlFolder.", "hidden", FinderColumn.Type.BOOLEAN, "=", true,
-					false, DLFolder::isHidden),
+					true, DLFolder::isHidden),
 				new FinderColumn<>(
 					"dlFolder.", "status", FinderColumn.Type.INTEGER, "!=",
 					true, true, DLFolder::getStatus));
 
-		_finderPathFetchByERC_G = new FinderPath(
+		_finderPathFetchByERC_G = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "groupId"}, true);
+			new String[] {"externalReferenceCode", "groupId"}, 0, 1, false,
+			convertNullFunction(DLFolder::getExternalReferenceCode),
+			DLFolder::getGroupId);
 
 		_uniquePersistenceFinderByERC_G = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByERC_G, _SQL_SELECT_DLFOLDER_WHERE,
+			this, _finderPathFetchByERC_G, _SQL_SELECT_DLFOLDER_WHERE, "",
 			new FinderColumn<>(
 				"dlFolder.", "externalReferenceCode", FinderColumn.Type.STRING,
-				"=", true, false, DLFolder::getExternalReferenceCode),
+				"=", true, true, DLFolder::getExternalReferenceCode),
 			new FinderColumn<>(
 				"dlFolder.", "groupId", FinderColumn.Type.LONG, "=", true, true,
 				DLFolder::getGroupId));
@@ -7607,14 +7014,14 @@ public class DLFolderPersistenceImpl
 		<DLFolder, com.liferay.document.library.kernel.model.DLFileEntryType>
 			dlFolderToDLFileEntryTypeTableMapper;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		DLFolderModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_DLFOLDER =
 		"SELECT dlFolder FROM DLFolder dlFolder";
 
 	private static final String _SQL_SELECT_DLFOLDER_WHERE =
 		"SELECT dlFolder FROM DLFolder dlFolder WHERE ";
-
-	private static final String _SQL_COUNT_DLFOLDER =
-		"SELECT COUNT(dlFolder) FROM DLFolder dlFolder";
 
 	private static final String _SQL_COUNT_DLFOLDER_WHERE =
 		"SELECT COUNT(dlFolder) FROM DLFolder dlFolder WHERE ";
@@ -7640,12 +7047,7 @@ public class DLFolderPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "DLFolder";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "dlFolder.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "DLFolder.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFolder exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFolder exists with the key {";
@@ -7662,4 +7064,4 @@ public class DLFolderPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:209435461
+// LIFERAY-SERVICE-BUILDER-HASH:-926595978

@@ -15,14 +15,11 @@ import com.liferay.knowledge.base.service.persistence.KBCommentUtil;
 import com.liferay.knowledge.base.service.persistence.impl.constants.KBPersistenceConstants;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
-import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.dao.orm.SessionFactory;
@@ -32,18 +29,15 @@ import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
+import com.liferay.portal.kernel.service.persistence.impl.ArrayableFinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinder;
 import com.liferay.portal.kernel.util.ArrayUtil;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
-import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.uuid.PortalUUIDUtil;
 
@@ -57,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +74,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KBCommentPersistence.class)
 public class KBCommentPersistenceImpl
-	extends BasePersistenceImpl<KBComment> implements KBCommentPersistence {
+	extends BasePersistenceImpl<KBComment, NoSuchCommentException>
+	implements KBCommentPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -97,9 +91,6 @@ public class KBCommentPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -1351,7 +1342,8 @@ public class KBCommentPersistenceImpl
 	private FinderPath _finderPathWithPaginationFindByC_C_S;
 	private FinderPath _finderPathWithoutPaginationFindByC_C_S;
 	private FinderPath _finderPathCountByC_C_S;
-	private FinderPath _finderPathWithPaginationCountByC_C_S;
+	private CollectionPersistenceFinder<KBComment>
+		_collectionPersistenceFinderByC_C_S;
 
 	/**
 	 * Returns all the kb comments where classNameId = &#63; and classPK = &#63; and status = &#63;.
@@ -1441,106 +1433,10 @@ public class KBCommentPersistenceImpl
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					KBComment.class)) {
 
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindByC_C_S;
-					finderArgs = new Object[] {classNameId, classPK, status};
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindByC_C_S;
-				finderArgs = new Object[] {
-					classNameId, classPK, status, start, end, orderByComparator
-				};
-			}
-
-			List<KBComment> list = null;
-
-			if (useFinderCache) {
-				list = (List<KBComment>)finderCache.getResult(
-					finderPath, finderArgs, this);
-
-				if ((list != null) && !list.isEmpty()) {
-					for (KBComment kbComment : list) {
-						if ((classNameId != kbComment.getClassNameId()) ||
-							(classPK != kbComment.getClassPK()) ||
-							(status != kbComment.getStatus())) {
-
-							list = null;
-
-							break;
-						}
-					}
-				}
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						5 + (orderByComparator.getOrderByFields().length * 2));
-				}
-				else {
-					sb = new StringBundler(5);
-				}
-
-				sb.append(_SQL_SELECT_KBCOMMENT_WHERE);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSNAMEID_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSPK_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_STATUS_2);
-
-				if (orderByComparator != null) {
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-				}
-				else {
-					sb.append(KBCommentModelImpl.ORDER_BY_JPQL);
-				}
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(classNameId);
-
-					queryPos.add(classPK);
-
-					queryPos.add(status);
-
-					list = (List<KBComment>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
+			return _collectionPersistenceFinderByC_C_S.find(
+				finderCache,
+				new Object[] {classNameId, classPK, new int[] {status}}, start,
+				end, orderByComparator, useFinderCache);
 		}
 	}
 
@@ -1599,14 +1495,10 @@ public class KBCommentPersistenceImpl
 		long classNameId, long classPK, int status,
 		OrderByComparator<KBComment> orderByComparator) {
 
-		List<KBComment> list = findByC_C_S(
-			classNameId, classPK, status, 0, 1, orderByComparator);
-
-		if (!list.isEmpty()) {
-			return list.get(0);
-		}
-
-		return null;
+		return _collectionPersistenceFinderByC_C_S.fetchFirst(
+			finderCache,
+			new Object[] {classNameId, classPK, new int[] {status}},
+			orderByComparator);
 	}
 
 	/**
@@ -1698,130 +1590,16 @@ public class KBCommentPersistenceImpl
 		OrderByComparator<KBComment> orderByComparator,
 		boolean useFinderCache) {
 
-		if (statuses == null) {
-			statuses = new int[0];
-		}
-		else if (statuses.length > 1) {
-			statuses = ArrayUtil.sortedUnique(statuses);
-		}
-
-		if (statuses.length == 1) {
-			return findByC_C_S(
-				classNameId, classPK, statuses[0], start, end,
-				orderByComparator);
-		}
-
 		try (SafeCloseable safeCloseable =
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					KBComment.class)) {
 
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderArgs = new Object[] {
-						classNameId, classPK, StringUtil.merge(statuses)
-					};
-				}
-			}
-			else if (useFinderCache) {
-				finderArgs = new Object[] {
-					classNameId, classPK, StringUtil.merge(statuses), start,
-					end, orderByComparator
-				};
-			}
-
-			List<KBComment> list = null;
-
-			if (useFinderCache) {
-				list = (List<KBComment>)finderCache.getResult(
-					_finderPathWithPaginationFindByC_C_S, finderArgs, this);
-
-				if ((list != null) && !list.isEmpty()) {
-					for (KBComment kbComment : list) {
-						if ((classNameId != kbComment.getClassNameId()) ||
-							(classPK != kbComment.getClassPK()) ||
-							!ArrayUtil.contains(
-								statuses, kbComment.getStatus())) {
-
-							list = null;
-
-							break;
-						}
-					}
-				}
-			}
-
-			if (list == null) {
-				StringBundler sb = new StringBundler();
-
-				sb.append(_SQL_SELECT_KBCOMMENT_WHERE);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSNAMEID_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSPK_2);
-
-				if (statuses.length > 0) {
-					sb.append("(");
-
-					sb.append(_FINDER_COLUMN_C_C_S_STATUS_7);
-
-					sb.append(StringUtil.merge(statuses));
-
-					sb.append(")");
-
-					sb.append(")");
-				}
-
-				sb.setStringAt(
-					removeConjunction(sb.stringAt(sb.index() - 1)),
-					sb.index() - 1);
-
-				if (orderByComparator != null) {
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-				}
-				else {
-					sb.append(KBCommentModelImpl.ORDER_BY_JPQL);
-				}
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(classNameId);
-
-					queryPos.add(classPK);
-
-					list = (List<KBComment>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(
-							_finderPathWithPaginationFindByC_C_S, finderArgs,
-							list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
+			return _collectionPersistenceFinderByC_C_S.find(
+				finderCache,
+				new Object[] {
+					classNameId, classPK, ArrayUtil.sortedUnique(statuses)
+				},
+				start, end, orderByComparator, useFinderCache);
 		}
 	}
 
@@ -1834,13 +1612,9 @@ public class KBCommentPersistenceImpl
 	 */
 	@Override
 	public void removeByC_C_S(long classNameId, long classPK, int status) {
-		for (KBComment kbComment :
-				findByC_C_S(
-					classNameId, classPK, status, QueryUtil.ALL_POS,
-					QueryUtil.ALL_POS, null)) {
-
-			remove(kbComment);
-		}
+		_collectionPersistenceFinderByC_C_S.remove(
+			finderCache,
+			new Object[] {classNameId, classPK, new int[] {status}});
 	}
 
 	/**
@@ -1857,54 +1631,9 @@ public class KBCommentPersistenceImpl
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					KBComment.class)) {
 
-			FinderPath finderPath = _finderPathCountByC_C_S;
-
-			Object[] finderArgs = new Object[] {classNameId, classPK, status};
-
-			Long count = (Long)finderCache.getResult(
-				finderPath, finderArgs, this);
-
-			if (count == null) {
-				StringBundler sb = new StringBundler(4);
-
-				sb.append(_SQL_COUNT_KBCOMMENT_WHERE);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSNAMEID_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSPK_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_STATUS_2);
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(classNameId);
-
-					queryPos.add(classPK);
-
-					queryPos.add(status);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(finderPath, finderArgs, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
+			return _collectionPersistenceFinderByC_C_S.count(
+				finderCache,
+				new Object[] {classNameId, classPK, new int[] {status}});
 		}
 	}
 
@@ -1918,79 +1647,15 @@ public class KBCommentPersistenceImpl
 	 */
 	@Override
 	public int countByC_C_S(long classNameId, long classPK, int[] statuses) {
-		if (statuses == null) {
-			statuses = new int[0];
-		}
-		else if (statuses.length > 1) {
-			statuses = ArrayUtil.sortedUnique(statuses);
-		}
-
 		try (SafeCloseable safeCloseable =
 				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
 					KBComment.class)) {
 
-			Object[] finderArgs = new Object[] {
-				classNameId, classPK, StringUtil.merge(statuses)
-			};
-
-			Long count = (Long)finderCache.getResult(
-				_finderPathWithPaginationCountByC_C_S, finderArgs, this);
-
-			if (count == null) {
-				StringBundler sb = new StringBundler();
-
-				sb.append(_SQL_COUNT_KBCOMMENT_WHERE);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSNAMEID_2);
-
-				sb.append(_FINDER_COLUMN_C_C_S_CLASSPK_2);
-
-				if (statuses.length > 0) {
-					sb.append("(");
-
-					sb.append(_FINDER_COLUMN_C_C_S_STATUS_7);
-
-					sb.append(StringUtil.merge(statuses));
-
-					sb.append(")");
-
-					sb.append(")");
-				}
-
-				sb.setStringAt(
-					removeConjunction(sb.stringAt(sb.index() - 1)),
-					sb.index() - 1);
-
-				String sql = sb.toString();
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					QueryPos queryPos = QueryPos.getInstance(query);
-
-					queryPos.add(classNameId);
-
-					queryPos.add(classPK);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(
-						_finderPathWithPaginationCountByC_C_S, finderArgs,
-						count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
+			return _collectionPersistenceFinderByC_C_S.count(
+				finderCache,
+				new Object[] {
+					classNameId, classPK, ArrayUtil.sortedUnique(statuses)
+				});
 		}
 	}
 
@@ -2002,9 +1667,6 @@ public class KBCommentPersistenceImpl
 
 	private static final String _FINDER_COLUMN_C_C_S_STATUS_2 =
 		"kbComment.status = ?";
-
-	private static final String _FINDER_COLUMN_C_C_S_STATUS_7 =
-		"kbComment.status IN (";
 
 	public KBCommentPersistenceImpl() {
 		Map<String, String> dbColumnNames = new HashMap<String, String>();
@@ -2019,116 +1681,6 @@ public class KBCommentPersistenceImpl
 		setModelPKClass(long.class);
 
 		setTable(KBCommentTable.INSTANCE);
-	}
-
-	/**
-	 * Caches the kb comment in the entity cache if it is enabled.
-	 *
-	 * @param kbComment the kb comment
-	 */
-	@Override
-	public void cacheResult(KBComment kbComment) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					kbComment.getCtCollectionId())) {
-
-			entityCache.putResult(
-				KBCommentImpl.class, kbComment.getPrimaryKey(), kbComment);
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G,
-				new Object[] {kbComment.getUuid(), kbComment.getGroupId()},
-				kbComment);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the kb comments in the entity cache if it is enabled.
-	 *
-	 * @param kbComments the kb comments
-	 */
-	@Override
-	public void cacheResult(List<KBComment> kbComments) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (kbComments.size() > _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (KBComment kbComment : kbComments) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						kbComment.getCtCollectionId())) {
-
-				if (entityCache.getResult(
-						KBCommentImpl.class, kbComment.getPrimaryKey()) ==
-							null) {
-
-					cacheResult(kbComment);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all kb comments.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KBCommentImpl.class);
-
-		finderCache.clearCache(KBCommentImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kb comment.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KBComment kbComment) {
-		entityCache.removeResult(KBCommentImpl.class, kbComment);
-	}
-
-	@Override
-	public void clearCache(List<KBComment> kbComments) {
-		for (KBComment kbComment : kbComments) {
-			entityCache.removeResult(KBCommentImpl.class, kbComment);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KBCommentImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KBCommentImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		KBCommentModelImpl kbCommentModelImpl) {
-
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					kbCommentModelImpl.getCtCollectionId())) {
-
-			Object[] args = new Object[] {
-				kbCommentModelImpl.getUuid(), kbCommentModelImpl.getGroupId()
-			};
-
-			finderCache.putResult(
-				_finderPathFetchByUUID_G, args, kbCommentModelImpl);
-		}
 	}
 
 	/**
@@ -2163,47 +1715,6 @@ public class KBCommentPersistenceImpl
 	@Override
 	public KBComment remove(long kbCommentId) throws NoSuchCommentException {
 		return remove((Serializable)kbCommentId);
-	}
-
-	/**
-	 * Removes the kb comment with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment that was removed
-	 * @throws NoSuchCommentException if a kb comment with the primary key could not be found
-	 */
-	@Override
-	public KBComment remove(Serializable primaryKey)
-		throws NoSuchCommentException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KBComment kbComment = (KBComment)session.get(
-				KBCommentImpl.class, primaryKey);
-
-			if (kbComment == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCommentException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kbComment);
-		}
-		catch (NoSuchCommentException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2313,41 +1824,13 @@ public class KBCommentPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			KBCommentImpl.class, kbCommentModelImpl, false, true);
-
-		cacheUniqueFindersCache(kbCommentModelImpl);
+		cacheUniqueFindersResult(kbComment, false);
 
 		if (isNew) {
 			kbComment.setNew(false);
 		}
 
 		kbComment.resetOriginalValues();
-
-		return kbComment;
-	}
-
-	/**
-	 * Returns the kb comment with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment
-	 * @throws NoSuchCommentException if a kb comment with the primary key could not be found
-	 */
-	@Override
-	public KBComment findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCommentException {
-
-		KBComment kbComment = fetchByPrimaryKey(primaryKey);
-
-		if (kbComment == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCommentException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return kbComment;
 	}
@@ -2366,49 +1849,9 @@ public class KBCommentPersistenceImpl
 		return findByPrimaryKey((Serializable)kbCommentId);
 	}
 
-	/**
-	 * Returns the kb comment with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment, or <code>null</code> if a kb comment with the primary key could not be found
-	 */
 	@Override
-	public KBComment fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(KBComment.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KBComment kbComment = (KBComment)entityCache.getResult(
-			KBCommentImpl.class, primaryKey);
-
-		if (kbComment != null) {
-			return kbComment;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kbComment = (KBComment)session.get(KBCommentImpl.class, primaryKey);
-
-			if (kbComment != null) {
-				cacheResult(kbComment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kbComment;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2420,318 +1863,6 @@ public class KBCommentPersistenceImpl
 	@Override
 	public KBComment fetchByPrimaryKey(long kbCommentId) {
 		return fetchByPrimaryKey((Serializable)kbCommentId);
-	}
-
-	@Override
-	public Map<Serializable, KBComment> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KBComment.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KBComment> map =
-			new HashMap<Serializable, KBComment>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KBComment kbComment = fetchByPrimaryKey(primaryKey);
-
-			if (kbComment != null) {
-				map.put(primaryKey, kbComment);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KBComment.class, primaryKey)) {
-
-				KBComment kbComment = (KBComment)entityCache.getResult(
-					KBCommentImpl.class, primaryKey);
-
-				if (kbComment == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kbComment);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KBComment kbComment : (List<KBComment>)query.list()) {
-				map.put(kbComment.getPrimaryKeyObj(), kbComment);
-
-				cacheResult(kbComment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the kb comments.
-	 *
-	 * @return the kb comments
-	 */
-	@Override
-	public List<KBComment> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the kb comments.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>KBCommentModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of kb comments
-	 * @param end the upper bound of the range of kb comments (not inclusive)
-	 * @return the range of kb comments
-	 */
-	@Override
-	public List<KBComment> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the kb comments.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>KBCommentModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of kb comments
-	 * @param end the upper bound of the range of kb comments (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of kb comments
-	 */
-	@Override
-	public List<KBComment> findAll(
-		int start, int end, OrderByComparator<KBComment> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the kb comments.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>KBCommentModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of kb comments
-	 * @param end the upper bound of the range of kb comments (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of kb comments
-	 */
-	@Override
-	public List<KBComment> findAll(
-		int start, int end, OrderByComparator<KBComment> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					KBComment.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<KBComment> list = null;
-
-			if (useFinderCache) {
-				list = (List<KBComment>)finderCache.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_KBCOMMENT);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_KBCOMMENT;
-
-					sql = sql.concat(KBCommentModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<KBComment>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						finderCache.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the kb comments from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (KBComment kbComment : findAll()) {
-			remove(kbComment);
-		}
-	}
-
-	/**
-	 * Returns the number of kb comments.
-	 *
-	 * @return the number of kb comments
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-					KBComment.class)) {
-
-			Long count = (Long)finderCache.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(_SQL_COUNT_KBCOMMENT);
-
-					count = (Long)query.uniqueResult();
-
-					finderCache.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -2830,21 +1961,6 @@ public class KBCommentPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -2855,33 +1971,34 @@ public class KBCommentPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
-			KBCommentModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"kbComment.", "uuid", FinderColumn.Type.STRING, "=", true, true,
 				KBComment::getUuid));
 
-		_finderPathFetchByUUID_G = new FinderPath(
+		_finderPathFetchByUUID_G = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByUUID_G",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "groupId"}, true);
+			new String[] {"uuid_", "groupId"}, 0, 1, false,
+			convertNullFunction(KBComment::getUuid), KBComment::getGroupId);
 
 		_uniquePersistenceFinderByUUID_G = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByUUID_G, _SQL_SELECT_KBCOMMENT_WHERE,
+			this, _finderPathFetchByUUID_G, _SQL_SELECT_KBCOMMENT_WHERE, "",
 			new FinderColumn<>(
-				"kbComment.", "uuid", FinderColumn.Type.STRING, "=", true,
-				false, KBComment::getUuid),
+				"kbComment.", "uuid", FinderColumn.Type.STRING, "=", true, true,
+				KBComment::getUuid),
 			new FinderColumn<>(
 				"kbComment.", "groupId", FinderColumn.Type.LONG, "=", true,
 				true, KBComment::getGroupId));
@@ -2898,12 +2015,12 @@ public class KBCommentPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -2911,10 +2028,10 @@ public class KBCommentPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_KBCOMMENT_WHERE,
 				_SQL_COUNT_KBCOMMENT_WHERE, KBCommentModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"kbComment.", "uuid", FinderColumn.Type.STRING, "=", true,
-					false, KBComment::getUuid),
+					true, KBComment::getUuid),
 				new FinderColumn<>(
 					"kbComment.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, KBComment::getCompanyId));
@@ -2943,7 +2060,7 @@ public class KBCommentPersistenceImpl
 				_finderPathWithoutPaginationFindByGroupId,
 				_finderPathCountByGroupId, _SQL_SELECT_KBCOMMENT_WHERE,
 				_SQL_COUNT_KBCOMMENT_WHERE, KBCommentModelImpl.ORDER_BY_JPQL,
-				_ORDER_BY_ENTITY_ALIAS,
+				_ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"kbComment.", "groupId", FinderColumn.Type.LONG, "=", true,
 					true, KBComment::getGroupId));
@@ -2971,10 +2088,10 @@ public class KBCommentPersistenceImpl
 			this, _finderPathWithPaginationFindByG_C,
 			_finderPathWithoutPaginationFindByG_C, _finderPathCountByG_C,
 			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
-			KBCommentModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"kbComment.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, KBComment::getGroupId),
+				true, KBComment::getGroupId),
 			new FinderColumn<>(
 				"kbComment.", "classNameId", FinderColumn.Type.LONG, "=", true,
 				true, KBComment::getClassNameId));
@@ -3002,10 +2119,10 @@ public class KBCommentPersistenceImpl
 			this, _finderPathWithPaginationFindByG_S,
 			_finderPathWithoutPaginationFindByG_S, _finderPathCountByG_S,
 			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
-			KBCommentModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"kbComment.", "groupId", FinderColumn.Type.LONG, "=", true,
-				false, KBComment::getGroupId),
+				true, KBComment::getGroupId),
 			new FinderColumn<>(
 				"kbComment.", "status", FinderColumn.Type.INTEGER, "=", true,
 				true, KBComment::getStatus));
@@ -3033,10 +2150,10 @@ public class KBCommentPersistenceImpl
 			this, _finderPathWithPaginationFindByC_C,
 			_finderPathWithoutPaginationFindByC_C, _finderPathCountByC_C,
 			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
-			KBCommentModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"kbComment.", "classNameId", FinderColumn.Type.LONG, "=", true,
-				false, KBComment::getClassNameId),
+				true, KBComment::getClassNameId),
 			new FinderColumn<>(
 				"kbComment.", "classPK", FinderColumn.Type.LONG, "=", true,
 				true, KBComment::getClassPK));
@@ -3068,13 +2185,13 @@ public class KBCommentPersistenceImpl
 			this, _finderPathWithPaginationFindByU_C_C,
 			_finderPathWithoutPaginationFindByU_C_C, _finderPathCountByU_C_C,
 			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
-			KBCommentModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
-				"kbComment.", "userId", FinderColumn.Type.LONG, "=", true,
-				false, KBComment::getUserId),
+				"kbComment.", "userId", FinderColumn.Type.LONG, "=", true, true,
+				KBComment::getUserId),
 			new FinderColumn<>(
 				"kbComment.", "classNameId", FinderColumn.Type.LONG, "=", true,
-				false, KBComment::getClassNameId),
+				true, KBComment::getClassNameId),
 			new FinderColumn<>(
 				"kbComment.", "classPK", FinderColumn.Type.LONG, "=", true,
 				true, KBComment::getClassPK));
@@ -3097,20 +2214,27 @@ public class KBCommentPersistenceImpl
 			new String[] {"classNameId", "classPK", "status"}, true);
 
 		_finderPathCountByC_C_S = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByC_C_S",
-			new String[] {
-				Long.class.getName(), Long.class.getName(),
-				Integer.class.getName()
-			},
-			new String[] {"classNameId", "classPK", "status"}, false);
-
-		_finderPathWithPaginationCountByC_C_S = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "countByC_C_S",
 			new String[] {
 				Long.class.getName(), Long.class.getName(),
 				Integer.class.getName()
 			},
 			new String[] {"classNameId", "classPK", "status"}, false);
+
+		_collectionPersistenceFinderByC_C_S = new CollectionPersistenceFinder<>(
+			this, _finderPathWithPaginationFindByC_C_S,
+			_finderPathWithoutPaginationFindByC_C_S, _finderPathCountByC_C_S,
+			_SQL_SELECT_KBCOMMENT_WHERE, _SQL_COUNT_KBCOMMENT_WHERE,
+			KBCommentModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
+			new FinderColumn<>(
+				"kbComment.", "classNameId", FinderColumn.Type.LONG, "=", true,
+				true, KBComment::getClassNameId),
+			new FinderColumn<>(
+				"kbComment.", "classPK", FinderColumn.Type.LONG, "=", true,
+				true, KBComment::getClassPK),
+			new ArrayableFinderColumn<>(
+				"kbComment.", "status", FinderColumn.Type.INTEGER, "=", false,
+				true, true, KBComment::getStatus));
 
 		KBCommentUtil.setPersistence(this);
 	}
@@ -3157,22 +2281,17 @@ public class KBCommentPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		KBCommentModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_KBCOMMENT =
 		"SELECT kbComment FROM KBComment kbComment";
 
 	private static final String _SQL_SELECT_KBCOMMENT_WHERE =
 		"SELECT kbComment FROM KBComment kbComment WHERE ";
 
-	private static final String _SQL_COUNT_KBCOMMENT =
-		"SELECT COUNT(kbComment) FROM KBComment kbComment";
-
 	private static final String _SQL_COUNT_KBCOMMENT_WHERE =
 		"SELECT COUNT(kbComment) FROM KBComment kbComment WHERE ";
-
-	private static final String _ORDER_BY_ENTITY_ALIAS = "kbComment.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KBComment exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KBComment exists with the key {";
@@ -3189,4 +2308,4 @@ public class KBCommentPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2118001786
+// LIFERAY-SERVICE-BUILDER-HASH:268317730

@@ -22,10 +22,10 @@ public class UniquePersistenceFinder<T extends BaseModel<T>>
 
 	@SafeVarargs
 	public UniquePersistenceFinder(
-		BasePersistenceImpl<T> basePersistenceImpl, FinderPath fetchPath,
-		String sqlSelectWhere, FinderColumn<T>... finderColumns) {
+		BasePersistenceImpl<T, ?> basePersistenceImpl, FinderPath fetchPath,
+		String sqlSelectWhere, String where, FinderColumn<T>... finderColumns) {
 
-		super(basePersistenceImpl, sqlSelectWhere, finderColumns);
+		super(basePersistenceImpl, sqlSelectWhere, where, finderColumns);
 
 		_fetchPath = fetchPath;
 	}

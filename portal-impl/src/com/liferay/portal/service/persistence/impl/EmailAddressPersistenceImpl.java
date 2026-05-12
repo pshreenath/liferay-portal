@@ -6,15 +6,12 @@
 package com.liferay.portal.service.persistence.impl;
 
 import com.liferay.petra.lang.SafeCloseable;
-import com.liferay.petra.string.StringBundler;
-import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.change.tracking.CTColumnResolutionType;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.EntityCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.exception.DuplicateEmailAddressExternalReferenceCodeException;
@@ -33,6 +30,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.EmailAddressPersistence;
 import com.liferay.portal.kernel.service.persistence.EmailAddressUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -41,8 +39,6 @@ import com.liferay.portal.kernel.service.persistence.impl.UniquePersistenceFinde
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -60,7 +56,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,7 +72,7 @@ import java.util.Set;
  * @generated
  */
 public class EmailAddressPersistenceImpl
-	extends BasePersistenceImpl<EmailAddress>
+	extends BasePersistenceImpl<EmailAddress, NoSuchEmailAddressException>
 	implements EmailAddressPersistence {
 
 	/*
@@ -94,9 +89,6 @@ public class EmailAddressPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -1408,121 +1400,6 @@ public class EmailAddressPersistenceImpl
 	}
 
 	/**
-	 * Caches the email address in the entity cache if it is enabled.
-	 *
-	 * @param emailAddress the email address
-	 */
-	@Override
-	public void cacheResult(EmailAddress emailAddress) {
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					emailAddress.getCtCollectionId())) {
-
-			EntityCacheUtil.putResult(
-				EmailAddressImpl.class, emailAddress.getPrimaryKey(),
-				emailAddress);
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByERC_C,
-				new Object[] {
-					emailAddress.getExternalReferenceCode(),
-					emailAddress.getCompanyId()
-				},
-				emailAddress);
-		}
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the email addresses in the entity cache if it is enabled.
-	 *
-	 * @param emailAddresses the email addresses
-	 */
-	@Override
-	public void cacheResult(List<EmailAddress> emailAddresses) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (emailAddresses.size() > _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (EmailAddress emailAddress : emailAddresses) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-						emailAddress.getCtCollectionId())) {
-
-				if (EntityCacheUtil.getResult(
-						EmailAddressImpl.class, emailAddress.getPrimaryKey()) ==
-							null) {
-
-					cacheResult(emailAddress);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all email addresses.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(EmailAddressImpl.class);
-
-		FinderCacheUtil.clearCache(EmailAddressImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the email address.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(EmailAddress emailAddress) {
-		EntityCacheUtil.removeResult(EmailAddressImpl.class, emailAddress);
-	}
-
-	@Override
-	public void clearCache(List<EmailAddress> emailAddresses) {
-		for (EmailAddress emailAddress : emailAddresses) {
-			EntityCacheUtil.removeResult(EmailAddressImpl.class, emailAddress);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(EmailAddressImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(EmailAddressImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		EmailAddressModelImpl emailAddressModelImpl) {
-
-		try (SafeCloseable safeCloseable =
-				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					emailAddressModelImpl.getCtCollectionId())) {
-
-			Object[] args = new Object[] {
-				emailAddressModelImpl.getExternalReferenceCode(),
-				emailAddressModelImpl.getCompanyId()
-			};
-
-			FinderCacheUtil.putResult(
-				_finderPathFetchByERC_C, args, emailAddressModelImpl);
-		}
-	}
-
-	/**
 	 * Creates a new email address with the primary key. Does not add the email address to the database.
 	 *
 	 * @param emailAddressId the primary key for the new email address
@@ -1556,47 +1433,6 @@ public class EmailAddressPersistenceImpl
 		throws NoSuchEmailAddressException {
 
 		return remove((Serializable)emailAddressId);
-	}
-
-	/**
-	 * Removes the email address with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the email address
-	 * @return the email address that was removed
-	 * @throws NoSuchEmailAddressException if a email address with the primary key could not be found
-	 */
-	@Override
-	public EmailAddress remove(Serializable primaryKey)
-		throws NoSuchEmailAddressException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			EmailAddress emailAddress = (EmailAddress)session.get(
-				EmailAddressImpl.class, primaryKey);
-
-			if (emailAddress == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEmailAddressException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(emailAddress);
-		}
-		catch (NoSuchEmailAddressException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1772,41 +1608,13 @@ public class EmailAddressPersistenceImpl
 			closeSession(session);
 		}
 
-		EntityCacheUtil.putResult(
-			EmailAddressImpl.class, emailAddressModelImpl, false, true);
-
-		cacheUniqueFindersCache(emailAddressModelImpl);
+		cacheUniqueFindersResult(emailAddress, false);
 
 		if (isNew) {
 			emailAddress.setNew(false);
 		}
 
 		emailAddress.resetOriginalValues();
-
-		return emailAddress;
-	}
-
-	/**
-	 * Returns the email address with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the email address
-	 * @return the email address
-	 * @throws NoSuchEmailAddressException if a email address with the primary key could not be found
-	 */
-	@Override
-	public EmailAddress findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEmailAddressException {
-
-		EmailAddress emailAddress = fetchByPrimaryKey(primaryKey);
-
-		if (emailAddress == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEmailAddressException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return emailAddress;
 	}
@@ -1825,52 +1633,9 @@ public class EmailAddressPersistenceImpl
 		return findByPrimaryKey((Serializable)emailAddressId);
 	}
 
-	/**
-	 * Returns the email address with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the email address
-	 * @return the email address, or <code>null</code> if a email address with the primary key could not be found
-	 */
 	@Override
-	public EmailAddress fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				EmailAddress.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		EmailAddress emailAddress = (EmailAddress)EntityCacheUtil.getResult(
-			EmailAddressImpl.class, primaryKey);
-
-		if (emailAddress != null) {
-			return emailAddress;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			emailAddress = (EmailAddress)session.get(
-				EmailAddressImpl.class, primaryKey);
-
-			if (emailAddress != null) {
-				cacheResult(emailAddress);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return emailAddress;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1882,319 +1647,6 @@ public class EmailAddressPersistenceImpl
 	@Override
 	public EmailAddress fetchByPrimaryKey(long emailAddressId) {
 		return fetchByPrimaryKey((Serializable)emailAddressId);
-	}
-
-	@Override
-	public Map<Serializable, EmailAddress> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(EmailAddress.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, EmailAddress> map =
-			new HashMap<Serializable, EmailAddress>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			EmailAddress emailAddress = fetchByPrimaryKey(primaryKey);
-
-			if (emailAddress != null) {
-				map.put(primaryKey, emailAddress);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						EmailAddress.class, primaryKey)) {
-
-				EmailAddress emailAddress =
-					(EmailAddress)EntityCacheUtil.getResult(
-						EmailAddressImpl.class, primaryKey);
-
-				if (emailAddress == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, emailAddress);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (EmailAddress emailAddress : (List<EmailAddress>)query.list()) {
-				map.put(emailAddress.getPrimaryKeyObj(), emailAddress);
-
-				cacheResult(emailAddress);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
-	}
-
-	/**
-	 * Returns all the email addresses.
-	 *
-	 * @return the email addresses
-	 */
-	@Override
-	public List<EmailAddress> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the email addresses.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>EmailAddressModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of email addresses
-	 * @param end the upper bound of the range of email addresses (not inclusive)
-	 * @return the range of email addresses
-	 */
-	@Override
-	public List<EmailAddress> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the email addresses.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>EmailAddressModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of email addresses
-	 * @param end the upper bound of the range of email addresses (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of email addresses
-	 */
-	@Override
-	public List<EmailAddress> findAll(
-		int start, int end, OrderByComparator<EmailAddress> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the email addresses.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>EmailAddressModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of email addresses
-	 * @param end the upper bound of the range of email addresses (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of email addresses
-	 */
-	@Override
-	public List<EmailAddress> findAll(
-		int start, int end, OrderByComparator<EmailAddress> orderByComparator,
-		boolean useFinderCache) {
-
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					EmailAddress.class)) {
-
-			FinderPath finderPath = null;
-			Object[] finderArgs = null;
-
-			if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-				(orderByComparator == null)) {
-
-				if (useFinderCache) {
-					finderPath = _finderPathWithoutPaginationFindAll;
-					finderArgs = FINDER_ARGS_EMPTY;
-				}
-			}
-			else if (useFinderCache) {
-				finderPath = _finderPathWithPaginationFindAll;
-				finderArgs = new Object[] {start, end, orderByComparator};
-			}
-
-			List<EmailAddress> list = null;
-
-			if (useFinderCache) {
-				list = (List<EmailAddress>)FinderCacheUtil.getResult(
-					finderPath, finderArgs, this);
-			}
-
-			if (list == null) {
-				StringBundler sb = null;
-				String sql = null;
-
-				if (orderByComparator != null) {
-					sb = new StringBundler(
-						2 + (orderByComparator.getOrderByFields().length * 2));
-
-					sb.append(_SQL_SELECT_EMAILADDRESS);
-
-					appendOrderByComparator(
-						sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-					sql = sb.toString();
-				}
-				else {
-					sql = _SQL_SELECT_EMAILADDRESS;
-
-					sql = sql.concat(EmailAddressModelImpl.ORDER_BY_JPQL);
-				}
-
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(sql);
-
-					list = (List<EmailAddress>)QueryUtil.list(
-						query, getDialect(), start, end);
-
-					cacheResult(list);
-
-					if (useFinderCache) {
-						FinderCacheUtil.putResult(finderPath, finderArgs, list);
-					}
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return list;
-		}
-	}
-
-	/**
-	 * Removes all the email addresses from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (EmailAddress emailAddress : findAll()) {
-			remove(emailAddress);
-		}
-	}
-
-	/**
-	 * Returns the number of email addresses.
-	 *
-	 * @return the number of email addresses
-	 */
-	@Override
-	public int countAll() {
-		try (SafeCloseable safeCloseable =
-				CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-					EmailAddress.class)) {
-
-			Long count = (Long)FinderCacheUtil.getResult(
-				_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-			if (count == null) {
-				Session session = null;
-
-				try {
-					session = openSession();
-
-					Query query = session.createQuery(_SQL_COUNT_EMAILADDRESS);
-
-					count = (Long)query.uniqueResult();
-
-					FinderCacheUtil.putResult(
-						_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-				}
-				catch (Exception exception) {
-					throw processException(exception);
-				}
-				finally {
-					closeSession(session);
-				}
-			}
-
-			return count.intValue();
-		}
 	}
 
 	@Override
@@ -2292,21 +1744,6 @@ public class EmailAddressPersistenceImpl
 	 * Initializes the email address persistence.
 	 */
 	public void afterPropertiesSet() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -2317,19 +1754,19 @@ public class EmailAddressPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_EMAILADDRESS_WHERE, _SQL_COUNT_EMAILADDRESS_WHERE,
-			EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"emailAddress.", "uuid", FinderColumn.Type.STRING, "=", true,
 				true, EmailAddress::getUuid));
@@ -2346,12 +1783,12 @@ public class EmailAddressPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -2359,10 +1796,10 @@ public class EmailAddressPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_EMAILADDRESS_WHERE,
 				_SQL_COUNT_EMAILADDRESS_WHERE,
-				EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"emailAddress.", "uuid", FinderColumn.Type.STRING, "=",
-					true, false, EmailAddress::getUuid),
+					true, true, EmailAddress::getUuid),
 				new FinderColumn<>(
 					"emailAddress.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, EmailAddress::getCompanyId));
@@ -2391,7 +1828,7 @@ public class EmailAddressPersistenceImpl
 				_finderPathWithoutPaginationFindByCompanyId,
 				_finderPathCountByCompanyId, _SQL_SELECT_EMAILADDRESS_WHERE,
 				_SQL_COUNT_EMAILADDRESS_WHERE,
-				EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"emailAddress.", "companyId", FinderColumn.Type.LONG, "=",
 					true, true, EmailAddress::getCompanyId));
@@ -2419,7 +1856,7 @@ public class EmailAddressPersistenceImpl
 				_finderPathWithoutPaginationFindByUserId,
 				_finderPathCountByUserId, _SQL_SELECT_EMAILADDRESS_WHERE,
 				_SQL_COUNT_EMAILADDRESS_WHERE,
-				EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"emailAddress.", "userId", FinderColumn.Type.LONG, "=",
 					true, true, EmailAddress::getUserId));
@@ -2447,10 +1884,10 @@ public class EmailAddressPersistenceImpl
 			this, _finderPathWithPaginationFindByC_C,
 			_finderPathWithoutPaginationFindByC_C, _finderPathCountByC_C,
 			_SQL_SELECT_EMAILADDRESS_WHERE, _SQL_COUNT_EMAILADDRESS_WHERE,
-			EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"emailAddress.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, EmailAddress::getCompanyId),
+				true, EmailAddress::getCompanyId),
 			new FinderColumn<>(
 				"emailAddress.", "classNameId", FinderColumn.Type.LONG, "=",
 				true, true, EmailAddress::getClassNameId));
@@ -2482,13 +1919,13 @@ public class EmailAddressPersistenceImpl
 			this, _finderPathWithPaginationFindByC_C_C,
 			_finderPathWithoutPaginationFindByC_C_C, _finderPathCountByC_C_C,
 			_SQL_SELECT_EMAILADDRESS_WHERE, _SQL_COUNT_EMAILADDRESS_WHERE,
-			EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"emailAddress.", "companyId", FinderColumn.Type.LONG, "=", true,
-				false, EmailAddress::getCompanyId),
+				true, EmailAddress::getCompanyId),
 			new FinderColumn<>(
 				"emailAddress.", "classNameId", FinderColumn.Type.LONG, "=",
-				true, false, EmailAddress::getClassNameId),
+				true, true, EmailAddress::getClassNameId),
 			new FinderColumn<>(
 				"emailAddress.", "classPK", FinderColumn.Type.LONG, "=", true,
 				true, EmailAddress::getClassPK));
@@ -2528,30 +1965,32 @@ public class EmailAddressPersistenceImpl
 				_finderPathWithoutPaginationFindByC_C_C_P,
 				_finderPathCountByC_C_C_P, _SQL_SELECT_EMAILADDRESS_WHERE,
 				_SQL_COUNT_EMAILADDRESS_WHERE,
-				EmailAddressModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				EmailAddressModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 				new FinderColumn<>(
 					"emailAddress.", "companyId", FinderColumn.Type.LONG, "=",
-					true, false, EmailAddress::getCompanyId),
+					true, true, EmailAddress::getCompanyId),
 				new FinderColumn<>(
 					"emailAddress.", "classNameId", FinderColumn.Type.LONG, "=",
-					true, false, EmailAddress::getClassNameId),
+					true, true, EmailAddress::getClassNameId),
 				new FinderColumn<>(
 					"emailAddress.", "classPK", FinderColumn.Type.LONG, "=",
-					true, false, EmailAddress::getClassPK),
+					true, true, EmailAddress::getClassPK),
 				new FinderColumn<>(
 					"emailAddress.", "primary", FinderColumn.Type.BOOLEAN, "=",
 					true, true, EmailAddress::isPrimary));
 
-		_finderPathFetchByERC_C = new FinderPath(
+		_finderPathFetchByERC_C = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "companyId"}, true);
+			new String[] {"externalReferenceCode", "companyId"}, 0, 1, false,
+			convertNullFunction(EmailAddress::getExternalReferenceCode),
+			EmailAddress::getCompanyId);
 
 		_uniquePersistenceFinderByERC_C = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByERC_C, _SQL_SELECT_EMAILADDRESS_WHERE,
+			this, _finderPathFetchByERC_C, _SQL_SELECT_EMAILADDRESS_WHERE, "",
 			new FinderColumn<>(
 				"emailAddress.", "externalReferenceCode",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				EmailAddress::getExternalReferenceCode),
 			new FinderColumn<>(
 				"emailAddress.", "companyId", FinderColumn.Type.LONG, "=", true,
@@ -2566,22 +2005,17 @@ public class EmailAddressPersistenceImpl
 		EntityCacheUtil.removeCache(EmailAddressImpl.class.getName());
 	}
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		EmailAddressModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_EMAILADDRESS =
 		"SELECT emailAddress FROM EmailAddress emailAddress";
 
 	private static final String _SQL_SELECT_EMAILADDRESS_WHERE =
 		"SELECT emailAddress FROM EmailAddress emailAddress WHERE ";
 
-	private static final String _SQL_COUNT_EMAILADDRESS =
-		"SELECT COUNT(emailAddress) FROM EmailAddress emailAddress";
-
 	private static final String _SQL_COUNT_EMAILADDRESS_WHERE =
 		"SELECT COUNT(emailAddress) FROM EmailAddress emailAddress WHERE ";
-
-	private static final String _ORDER_BY_ENTITY_ALIAS = "emailAddress.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No EmailAddress exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No EmailAddress exists with the key {";
@@ -2598,4 +2032,4 @@ public class EmailAddressPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:845875749
+// LIFERAY-SERVICE-BUILDER-HASH:-1579477091

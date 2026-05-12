@@ -19,7 +19,6 @@ import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.dao.orm.EntityCache;
 import com.liferay.portal.kernel.dao.orm.FinderCache;
 import com.liferay.portal.kernel.dao.orm.FinderPath;
-import com.liferay.portal.kernel.dao.orm.Query;
 import com.liferay.portal.kernel.dao.orm.QueryPos;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.SQLQuery;
@@ -36,6 +35,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.impl.ArrayableFinderColumn;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
 import com.liferay.portal.kernel.service.persistence.impl.FinderColumn;
@@ -44,8 +44,6 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -82,7 +80,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DispatchTriggerPersistence.class)
 public class DispatchTriggerPersistenceImpl
-	extends BasePersistenceImpl<DispatchTrigger>
+	extends BasePersistenceImpl<DispatchTrigger, NoSuchTriggerException>
 	implements DispatchTriggerPersistence {
 
 	/*
@@ -99,9 +97,6 @@ public class DispatchTriggerPersistenceImpl
 	public static final String FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION =
 		FINDER_CLASS_NAME_ENTITY + ".List2";
 
-	private FinderPath _finderPathWithPaginationFindAll;
-	private FinderPath _finderPathWithoutPaginationFindAll;
-	private FinderPath _finderPathCountAll;
 	private FinderPath _finderPathWithPaginationFindByUuid;
 	private FinderPath _finderPathWithoutPaginationFindByUuid;
 	private FinderPath _finderPathCountByUuid;
@@ -323,7 +318,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -715,7 +710,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1094,7 +1089,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1441,7 +1436,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -1802,7 +1797,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2201,7 +2196,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2466,7 +2461,8 @@ public class DispatchTriggerPersistenceImpl
 	private FinderPath _finderPathWithPaginationFindByA_DTCM;
 	private FinderPath _finderPathWithoutPaginationFindByA_DTCM;
 	private FinderPath _finderPathCountByA_DTCM;
-	private FinderPath _finderPathWithPaginationCountByA_DTCM;
+	private CollectionPersistenceFinder<DispatchTrigger>
+		_collectionPersistenceFinderByA_DTCM;
 
 	/**
 	 * Returns all the dispatch triggers where active = &#63; and dispatchTaskClusterMode = &#63;.
@@ -2549,102 +2545,10 @@ public class DispatchTriggerPersistenceImpl
 		OrderByComparator<DispatchTrigger> orderByComparator,
 		boolean useFinderCache) {
 
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindByA_DTCM;
-				finderArgs = new Object[] {active, dispatchTaskClusterMode};
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindByA_DTCM;
-			finderArgs = new Object[] {
-				active, dispatchTaskClusterMode, start, end, orderByComparator
-			};
-		}
-
-		List<DispatchTrigger> list = null;
-
-		if (useFinderCache) {
-			list = (List<DispatchTrigger>)finderCache.getResult(
-				finderPath, finderArgs, this);
-
-			if ((list != null) && !list.isEmpty()) {
-				for (DispatchTrigger dispatchTrigger : list) {
-					if ((active != dispatchTrigger.isActive()) ||
-						(dispatchTaskClusterMode !=
-							dispatchTrigger.getDispatchTaskClusterMode())) {
-
-						list = null;
-
-						break;
-					}
-				}
-			}
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					4 + (orderByComparator.getOrderByFields().length * 2));
-			}
-			else {
-				sb = new StringBundler(4);
-			}
-
-			sb.append(_SQL_SELECT_DISPATCHTRIGGER_WHERE);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_ACTIVE_2);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_DISPATCHTASKCLUSTERMODE_2);
-
-			if (orderByComparator != null) {
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-			}
-			else {
-				sb.append(DispatchTriggerModelImpl.ORDER_BY_JPQL);
-			}
-
-			String sql = sb.toString();
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				QueryPos queryPos = QueryPos.getInstance(query);
-
-				queryPos.add(active);
-
-				queryPos.add(dispatchTaskClusterMode);
-
-				list = (List<DispatchTrigger>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
+		return _collectionPersistenceFinderByA_DTCM.find(
+			finderCache,
+			new Object[] {active, new int[] {dispatchTaskClusterMode}}, start,
+			end, orderByComparator, useFinderCache);
 	}
 
 	/**
@@ -2697,14 +2601,10 @@ public class DispatchTriggerPersistenceImpl
 		boolean active, int dispatchTaskClusterMode,
 		OrderByComparator<DispatchTrigger> orderByComparator) {
 
-		List<DispatchTrigger> list = findByA_DTCM(
-			active, dispatchTaskClusterMode, 0, 1, orderByComparator);
-
-		if (!list.isEmpty()) {
-			return list.get(0);
-		}
-
-		return null;
+		return _collectionPersistenceFinderByA_DTCM.fetchFirst(
+			finderCache,
+			new Object[] {active, new int[] {dispatchTaskClusterMode}},
+			orderByComparator);
 	}
 
 	/**
@@ -2807,7 +2707,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -2975,7 +2875,7 @@ public class DispatchTriggerPersistenceImpl
 		if (orderByComparator != null) {
 			if (getDB().isSupportsInlineDistinct()) {
 				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator, true);
+					sb, _ENTITY_ALIAS_PREFIX, orderByComparator, true);
 			}
 			else {
 				appendOrderByComparator(
@@ -3112,122 +3012,12 @@ public class DispatchTriggerPersistenceImpl
 		OrderByComparator<DispatchTrigger> orderByComparator,
 		boolean useFinderCache) {
 
-		if (dispatchTaskClusterModes == null) {
-			dispatchTaskClusterModes = new int[0];
-		}
-		else if (dispatchTaskClusterModes.length > 1) {
-			dispatchTaskClusterModes = ArrayUtil.sortedUnique(
-				dispatchTaskClusterModes);
-		}
-
-		if (dispatchTaskClusterModes.length == 1) {
-			return findByA_DTCM(
-				active, dispatchTaskClusterModes[0], start, end,
-				orderByComparator);
-		}
-
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderArgs = new Object[] {
-					active, StringUtil.merge(dispatchTaskClusterModes)
-				};
-			}
-		}
-		else if (useFinderCache) {
-			finderArgs = new Object[] {
-				active, StringUtil.merge(dispatchTaskClusterModes), start, end,
-				orderByComparator
-			};
-		}
-
-		List<DispatchTrigger> list = null;
-
-		if (useFinderCache) {
-			list = (List<DispatchTrigger>)finderCache.getResult(
-				_finderPathWithPaginationFindByA_DTCM, finderArgs, this);
-
-			if ((list != null) && !list.isEmpty()) {
-				for (DispatchTrigger dispatchTrigger : list) {
-					if ((active != dispatchTrigger.isActive()) ||
-						!ArrayUtil.contains(
-							dispatchTaskClusterModes,
-							dispatchTrigger.getDispatchTaskClusterMode())) {
-
-						list = null;
-
-						break;
-					}
-				}
-			}
-		}
-
-		if (list == null) {
-			StringBundler sb = new StringBundler();
-
-			sb.append(_SQL_SELECT_DISPATCHTRIGGER_WHERE);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_ACTIVE_2);
-
-			if (dispatchTaskClusterModes.length > 0) {
-				sb.append("(");
-
-				sb.append(_FINDER_COLUMN_A_DTCM_DISPATCHTASKCLUSTERMODE_7);
-
-				sb.append(StringUtil.merge(dispatchTaskClusterModes));
-
-				sb.append(")");
-
-				sb.append(")");
-			}
-
-			sb.setStringAt(
-				removeConjunction(sb.stringAt(sb.index() - 1)), sb.index() - 1);
-
-			if (orderByComparator != null) {
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-			}
-			else {
-				sb.append(DispatchTriggerModelImpl.ORDER_BY_JPQL);
-			}
-
-			String sql = sb.toString();
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				QueryPos queryPos = QueryPos.getInstance(query);
-
-				queryPos.add(active);
-
-				list = (List<DispatchTrigger>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(
-						_finderPathWithPaginationFindByA_DTCM, finderArgs,
-						list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
+		return _collectionPersistenceFinderByA_DTCM.find(
+			finderCache,
+			new Object[] {
+				active, ArrayUtil.sortedUnique(dispatchTaskClusterModes)
+			},
+			start, end, orderByComparator, useFinderCache);
 	}
 
 	/**
@@ -3238,13 +3028,9 @@ public class DispatchTriggerPersistenceImpl
 	 */
 	@Override
 	public void removeByA_DTCM(boolean active, int dispatchTaskClusterMode) {
-		for (DispatchTrigger dispatchTrigger :
-				findByA_DTCM(
-					active, dispatchTaskClusterMode, QueryUtil.ALL_POS,
-					QueryUtil.ALL_POS, null)) {
-
-			remove(dispatchTrigger);
-		}
+		_collectionPersistenceFinderByA_DTCM.remove(
+			finderCache,
+			new Object[] {active, new int[] {dispatchTaskClusterMode}});
 	}
 
 	/**
@@ -3256,49 +3042,9 @@ public class DispatchTriggerPersistenceImpl
 	 */
 	@Override
 	public int countByA_DTCM(boolean active, int dispatchTaskClusterMode) {
-		FinderPath finderPath = _finderPathCountByA_DTCM;
-
-		Object[] finderArgs = new Object[] {active, dispatchTaskClusterMode};
-
-		Long count = (Long)finderCache.getResult(finderPath, finderArgs, this);
-
-		if (count == null) {
-			StringBundler sb = new StringBundler(3);
-
-			sb.append(_SQL_COUNT_DISPATCHTRIGGER_WHERE);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_ACTIVE_2);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_DISPATCHTASKCLUSTERMODE_2);
-
-			String sql = sb.toString();
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				QueryPos queryPos = QueryPos.getInstance(query);
-
-				queryPos.add(active);
-
-				queryPos.add(dispatchTaskClusterMode);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(finderPath, finderArgs, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
+		return _collectionPersistenceFinderByA_DTCM.count(
+			finderCache,
+			new Object[] {active, new int[] {dispatchTaskClusterMode}});
 	}
 
 	/**
@@ -3310,70 +3056,11 @@ public class DispatchTriggerPersistenceImpl
 	 */
 	@Override
 	public int countByA_DTCM(boolean active, int[] dispatchTaskClusterModes) {
-		if (dispatchTaskClusterModes == null) {
-			dispatchTaskClusterModes = new int[0];
-		}
-		else if (dispatchTaskClusterModes.length > 1) {
-			dispatchTaskClusterModes = ArrayUtil.sortedUnique(
-				dispatchTaskClusterModes);
-		}
-
-		Object[] finderArgs = new Object[] {
-			active, StringUtil.merge(dispatchTaskClusterModes)
-		};
-
-		Long count = (Long)finderCache.getResult(
-			_finderPathWithPaginationCountByA_DTCM, finderArgs, this);
-
-		if (count == null) {
-			StringBundler sb = new StringBundler();
-
-			sb.append(_SQL_COUNT_DISPATCHTRIGGER_WHERE);
-
-			sb.append(_FINDER_COLUMN_A_DTCM_ACTIVE_2);
-
-			if (dispatchTaskClusterModes.length > 0) {
-				sb.append("(");
-
-				sb.append(_FINDER_COLUMN_A_DTCM_DISPATCHTASKCLUSTERMODE_7);
-
-				sb.append(StringUtil.merge(dispatchTaskClusterModes));
-
-				sb.append(")");
-
-				sb.append(")");
-			}
-
-			sb.setStringAt(
-				removeConjunction(sb.stringAt(sb.index() - 1)), sb.index() - 1);
-
-			String sql = sb.toString();
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				QueryPos queryPos = QueryPos.getInstance(query);
-
-				queryPos.add(active);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathWithPaginationCountByA_DTCM, finderArgs, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
+		return _collectionPersistenceFinderByA_DTCM.count(
+			finderCache,
+			new Object[] {
+				active, ArrayUtil.sortedUnique(dispatchTaskClusterModes)
+			});
 	}
 
 	/**
@@ -3651,123 +3338,6 @@ public class DispatchTriggerPersistenceImpl
 	}
 
 	/**
-	 * Caches the dispatch trigger in the entity cache if it is enabled.
-	 *
-	 * @param dispatchTrigger the dispatch trigger
-	 */
-	@Override
-	public void cacheResult(DispatchTrigger dispatchTrigger) {
-		entityCache.putResult(
-			DispatchTriggerImpl.class, dispatchTrigger.getPrimaryKey(),
-			dispatchTrigger);
-
-		finderCache.putResult(
-			_finderPathFetchByC_N,
-			new Object[] {
-				dispatchTrigger.getCompanyId(), dispatchTrigger.getName()
-			},
-			dispatchTrigger);
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C,
-			new Object[] {
-				dispatchTrigger.getExternalReferenceCode(),
-				dispatchTrigger.getCompanyId()
-			},
-			dispatchTrigger);
-	}
-
-	private int _valueObjectFinderCacheListThreshold;
-
-	/**
-	 * Caches the dispatch triggers in the entity cache if it is enabled.
-	 *
-	 * @param dispatchTriggers the dispatch triggers
-	 */
-	@Override
-	public void cacheResult(List<DispatchTrigger> dispatchTriggers) {
-		if ((_valueObjectFinderCacheListThreshold == 0) ||
-			((_valueObjectFinderCacheListThreshold > 0) &&
-			 (dispatchTriggers.size() >
-				 _valueObjectFinderCacheListThreshold))) {
-
-			return;
-		}
-
-		for (DispatchTrigger dispatchTrigger : dispatchTriggers) {
-			if (entityCache.getResult(
-					DispatchTriggerImpl.class,
-					dispatchTrigger.getPrimaryKey()) == null) {
-
-				cacheResult(dispatchTrigger);
-			}
-		}
-	}
-
-	/**
-	 * Clears the cache for all dispatch triggers.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DispatchTriggerImpl.class);
-
-		finderCache.clearCache(DispatchTriggerImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the dispatch trigger.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DispatchTrigger dispatchTrigger) {
-		entityCache.removeResult(DispatchTriggerImpl.class, dispatchTrigger);
-	}
-
-	@Override
-	public void clearCache(List<DispatchTrigger> dispatchTriggers) {
-		for (DispatchTrigger dispatchTrigger : dispatchTriggers) {
-			entityCache.removeResult(
-				DispatchTriggerImpl.class, dispatchTrigger);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DispatchTriggerImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DispatchTriggerImpl.class, primaryKey);
-		}
-	}
-
-	protected void cacheUniqueFindersCache(
-		DispatchTriggerModelImpl dispatchTriggerModelImpl) {
-
-		Object[] args = new Object[] {
-			dispatchTriggerModelImpl.getCompanyId(),
-			dispatchTriggerModelImpl.getName()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByC_N, args, dispatchTriggerModelImpl);
-
-		args = new Object[] {
-			dispatchTriggerModelImpl.getExternalReferenceCode(),
-			dispatchTriggerModelImpl.getCompanyId()
-		};
-
-		finderCache.putResult(
-			_finderPathFetchByERC_C, args, dispatchTriggerModelImpl);
-	}
-
-	/**
 	 * Creates a new dispatch trigger with the primary key. Does not add the dispatch trigger to the database.
 	 *
 	 * @param dispatchTriggerId the primary key for the new dispatch trigger
@@ -3801,47 +3371,6 @@ public class DispatchTriggerPersistenceImpl
 		throws NoSuchTriggerException {
 
 		return remove((Serializable)dispatchTriggerId);
-	}
-
-	/**
-	 * Removes the dispatch trigger with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the dispatch trigger
-	 * @return the dispatch trigger that was removed
-	 * @throws NoSuchTriggerException if a dispatch trigger with the primary key could not be found
-	 */
-	@Override
-	public DispatchTrigger remove(Serializable primaryKey)
-		throws NoSuchTriggerException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DispatchTrigger dispatchTrigger = (DispatchTrigger)session.get(
-				DispatchTriggerImpl.class, primaryKey);
-
-			if (dispatchTrigger == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTriggerException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dispatchTrigger);
-		}
-		catch (NoSuchTriggerException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -4015,41 +3544,13 @@ public class DispatchTriggerPersistenceImpl
 			closeSession(session);
 		}
 
-		entityCache.putResult(
-			DispatchTriggerImpl.class, dispatchTriggerModelImpl, false, true);
-
-		cacheUniqueFindersCache(dispatchTriggerModelImpl);
+		cacheUniqueFindersResult(dispatchTrigger, false);
 
 		if (isNew) {
 			dispatchTrigger.setNew(false);
 		}
 
 		dispatchTrigger.resetOriginalValues();
-
-		return dispatchTrigger;
-	}
-
-	/**
-	 * Returns the dispatch trigger with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the dispatch trigger
-	 * @return the dispatch trigger
-	 * @throws NoSuchTriggerException if a dispatch trigger with the primary key could not be found
-	 */
-	@Override
-	public DispatchTrigger findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTriggerException {
-
-		DispatchTrigger dispatchTrigger = fetchByPrimaryKey(primaryKey);
-
-		if (dispatchTrigger == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTriggerException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
 
 		return dispatchTrigger;
 	}
@@ -4077,187 +3578,6 @@ public class DispatchTriggerPersistenceImpl
 	@Override
 	public DispatchTrigger fetchByPrimaryKey(long dispatchTriggerId) {
 		return fetchByPrimaryKey((Serializable)dispatchTriggerId);
-	}
-
-	/**
-	 * Returns all the dispatch triggers.
-	 *
-	 * @return the dispatch triggers
-	 */
-	@Override
-	public List<DispatchTrigger> findAll() {
-		return findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-	}
-
-	/**
-	 * Returns a range of all the dispatch triggers.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DispatchTriggerModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of dispatch triggers
-	 * @param end the upper bound of the range of dispatch triggers (not inclusive)
-	 * @return the range of dispatch triggers
-	 */
-	@Override
-	public List<DispatchTrigger> findAll(int start, int end) {
-		return findAll(start, end, null);
-	}
-
-	/**
-	 * Returns an ordered range of all the dispatch triggers.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DispatchTriggerModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of dispatch triggers
-	 * @param end the upper bound of the range of dispatch triggers (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @return the ordered range of dispatch triggers
-	 */
-	@Override
-	public List<DispatchTrigger> findAll(
-		int start, int end,
-		OrderByComparator<DispatchTrigger> orderByComparator) {
-
-		return findAll(start, end, orderByComparator, true);
-	}
-
-	/**
-	 * Returns an ordered range of all the dispatch triggers.
-	 *
-	 * <p>
-	 * Useful when paginating results. Returns a maximum of <code>end - start</code> instances. <code>start</code> and <code>end</code> are not primary keys, they are indexes in the result set. Thus, <code>0</code> refers to the first result in the set. Setting both <code>start</code> and <code>end</code> to <code>QueryUtil#ALL_POS</code> will return the full result set. If <code>orderByComparator</code> is specified, then the query will include the given ORDER BY logic. If <code>orderByComparator</code> is absent, then the query will include the default ORDER BY logic from <code>DispatchTriggerModelImpl</code>.
-	 * </p>
-	 *
-	 * @param start the lower bound of the range of dispatch triggers
-	 * @param end the upper bound of the range of dispatch triggers (not inclusive)
-	 * @param orderByComparator the comparator to order the results by (optionally <code>null</code>)
-	 * @param useFinderCache whether to use the finder cache
-	 * @return the ordered range of dispatch triggers
-	 */
-	@Override
-	public List<DispatchTrigger> findAll(
-		int start, int end,
-		OrderByComparator<DispatchTrigger> orderByComparator,
-		boolean useFinderCache) {
-
-		FinderPath finderPath = null;
-		Object[] finderArgs = null;
-
-		if ((start == QueryUtil.ALL_POS) && (end == QueryUtil.ALL_POS) &&
-			(orderByComparator == null)) {
-
-			if (useFinderCache) {
-				finderPath = _finderPathWithoutPaginationFindAll;
-				finderArgs = FINDER_ARGS_EMPTY;
-			}
-		}
-		else if (useFinderCache) {
-			finderPath = _finderPathWithPaginationFindAll;
-			finderArgs = new Object[] {start, end, orderByComparator};
-		}
-
-		List<DispatchTrigger> list = null;
-
-		if (useFinderCache) {
-			list = (List<DispatchTrigger>)finderCache.getResult(
-				finderPath, finderArgs, this);
-		}
-
-		if (list == null) {
-			StringBundler sb = null;
-			String sql = null;
-
-			if (orderByComparator != null) {
-				sb = new StringBundler(
-					2 + (orderByComparator.getOrderByFields().length * 2));
-
-				sb.append(_SQL_SELECT_DISPATCHTRIGGER);
-
-				appendOrderByComparator(
-					sb, _ORDER_BY_ENTITY_ALIAS, orderByComparator);
-
-				sql = sb.toString();
-			}
-			else {
-				sql = _SQL_SELECT_DISPATCHTRIGGER;
-
-				sql = sql.concat(DispatchTriggerModelImpl.ORDER_BY_JPQL);
-			}
-
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(sql);
-
-				list = (List<DispatchTrigger>)QueryUtil.list(
-					query, getDialect(), start, end);
-
-				cacheResult(list);
-
-				if (useFinderCache) {
-					finderCache.putResult(finderPath, finderArgs, list);
-				}
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return list;
-	}
-
-	/**
-	 * Removes all the dispatch triggers from the database.
-	 *
-	 */
-	@Override
-	public void removeAll() {
-		for (DispatchTrigger dispatchTrigger : findAll()) {
-			remove(dispatchTrigger);
-		}
-	}
-
-	/**
-	 * Returns the number of dispatch triggers.
-	 *
-	 * @return the number of dispatch triggers
-	 */
-	@Override
-	public int countAll() {
-		Long count = (Long)finderCache.getResult(
-			_finderPathCountAll, FINDER_ARGS_EMPTY, this);
-
-		if (count == null) {
-			Session session = null;
-
-			try {
-				session = openSession();
-
-				Query query = session.createQuery(_SQL_COUNT_DISPATCHTRIGGER);
-
-				count = (Long)query.uniqueResult();
-
-				finderCache.putResult(
-					_finderPathCountAll, FINDER_ARGS_EMPTY, count);
-			}
-			catch (Exception exception) {
-				throw processException(exception);
-			}
-			finally {
-				closeSession(session);
-			}
-		}
-
-		return count.intValue();
 	}
 
 	@Override
@@ -4290,21 +3610,6 @@ public class DispatchTriggerPersistenceImpl
 	 */
 	@Activate
 	public void activate() {
-		_valueObjectFinderCacheListThreshold = GetterUtil.getInteger(
-			PropsUtil.get(PropsKeys.VALUE_OBJECT_FINDER_CACHE_LIST_THRESHOLD));
-
-		_finderPathWithPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathWithoutPaginationFindAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findAll", new String[0],
-			new String[0], true);
-
-		_finderPathCountAll = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countAll",
-			new String[0], new String[0], false);
-
 		_finderPathWithPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "findByUuid",
 			new String[] {
@@ -4315,19 +3620,19 @@ public class DispatchTriggerPersistenceImpl
 
 		_finderPathWithoutPaginationFindByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			true);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			true, null);
 
 		_finderPathCountByUuid = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid",
-			new String[] {String.class.getName()}, new String[] {"uuid_"},
-			false);
+			new String[] {String.class.getName()}, new String[] {"uuid_"}, 0, 1,
+			false, null);
 
 		_collectionPersistenceFinderByUuid = new CollectionPersistenceFinder<>(
 			this, _finderPathWithPaginationFindByUuid,
 			_finderPathWithoutPaginationFindByUuid, _finderPathCountByUuid,
 			_SQL_SELECT_DISPATCHTRIGGER_WHERE, _SQL_COUNT_DISPATCHTRIGGER_WHERE,
-			DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"dispatchTrigger.", "uuid", FinderColumn.Type.STRING, "=", true,
 				true, DispatchTrigger::getUuid));
@@ -4344,12 +3649,12 @@ public class DispatchTriggerPersistenceImpl
 		_finderPathWithoutPaginationFindByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, true);
+			new String[] {"uuid_", "companyId"}, 0, 1, true, null);
 
 		_finderPathCountByUuid_C = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByUuid_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"uuid_", "companyId"}, false);
+			new String[] {"uuid_", "companyId"}, 0, 1, false, null);
 
 		_collectionPersistenceFinderByUuid_C =
 			new CollectionPersistenceFinder<>(
@@ -4357,10 +3662,11 @@ public class DispatchTriggerPersistenceImpl
 				_finderPathWithoutPaginationFindByUuid_C,
 				_finderPathCountByUuid_C, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
 				_SQL_COUNT_DISPATCHTRIGGER_WHERE,
-				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"dispatchTrigger.", "uuid", FinderColumn.Type.STRING, "=",
-					true, false, DispatchTrigger::getUuid),
+					true, true, DispatchTrigger::getUuid),
 				new FinderColumn<>(
 					"dispatchTrigger.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, DispatchTrigger::getCompanyId));
@@ -4389,7 +3695,8 @@ public class DispatchTriggerPersistenceImpl
 				_finderPathWithoutPaginationFindByCompanyId,
 				_finderPathCountByCompanyId, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
 				_SQL_COUNT_DISPATCHTRIGGER_WHERE,
-				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"dispatchTrigger.", "companyId", FinderColumn.Type.LONG,
 					"=", true, true, DispatchTrigger::getCompanyId));
@@ -4418,7 +3725,8 @@ public class DispatchTriggerPersistenceImpl
 				_finderPathWithoutPaginationFindByActive,
 				_finderPathCountByActive, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
 				_SQL_COUNT_DISPATCHTRIGGER_WHERE,
-				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"dispatchTrigger.", "active", FinderColumn.Type.BOOLEAN,
 					"=", true, true, DispatchTrigger::isActive));
@@ -4446,10 +3754,10 @@ public class DispatchTriggerPersistenceImpl
 			this, _finderPathWithPaginationFindByC_U,
 			_finderPathWithoutPaginationFindByC_U, _finderPathCountByC_U,
 			_SQL_SELECT_DISPATCHTRIGGER_WHERE, _SQL_COUNT_DISPATCHTRIGGER_WHERE,
-			DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+			DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX, "",
 			new FinderColumn<>(
 				"dispatchTrigger.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, DispatchTrigger::getCompanyId),
+				true, true, DispatchTrigger::getCompanyId),
 			new FinderColumn<>(
 				"dispatchTrigger.", "userId", FinderColumn.Type.LONG, "=", true,
 				true, DispatchTrigger::getUserId));
@@ -4466,12 +3774,14 @@ public class DispatchTriggerPersistenceImpl
 		_finderPathWithoutPaginationFindByC_DTET = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "findByC_DTET",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"companyId", "dispatchTaskExecutorType"}, true);
+			new String[] {"companyId", "dispatchTaskExecutorType"}, 0, 2, true,
+			null);
 
 		_finderPathCountByC_DTET = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByC_DTET",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"companyId", "dispatchTaskExecutorType"}, false);
+			new String[] {"companyId", "dispatchTaskExecutorType"}, 0, 2, false,
+			null);
 
 		_collectionPersistenceFinderByC_DTET =
 			new CollectionPersistenceFinder<>(
@@ -4479,25 +3789,28 @@ public class DispatchTriggerPersistenceImpl
 				_finderPathWithoutPaginationFindByC_DTET,
 				_finderPathCountByC_DTET, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
 				_SQL_COUNT_DISPATCHTRIGGER_WHERE,
-				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ORDER_BY_ENTITY_ALIAS,
+				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
 				new FinderColumn<>(
 					"dispatchTrigger.", "companyId", FinderColumn.Type.LONG,
-					"=", true, false, DispatchTrigger::getCompanyId),
+					"=", true, true, DispatchTrigger::getCompanyId),
 				new FinderColumn<>(
 					"dispatchTrigger.", "dispatchTaskExecutorType",
 					FinderColumn.Type.STRING, "=", true, true,
 					DispatchTrigger::getDispatchTaskExecutorType));
 
-		_finderPathFetchByC_N = new FinderPath(
+		_finderPathFetchByC_N = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByC_N",
 			new String[] {Long.class.getName(), String.class.getName()},
-			new String[] {"companyId", "name"}, true);
+			new String[] {"companyId", "name"}, 0, 2, false,
+			DispatchTrigger::getCompanyId,
+			convertNullFunction(DispatchTrigger::getName));
 
 		_uniquePersistenceFinderByC_N = new UniquePersistenceFinder<>(
-			this, _finderPathFetchByC_N, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
+			this, _finderPathFetchByC_N, _SQL_SELECT_DISPATCHTRIGGER_WHERE, "",
 			new FinderColumn<>(
 				"dispatchTrigger.", "companyId", FinderColumn.Type.LONG, "=",
-				true, false, DispatchTrigger::getCompanyId),
+				true, true, DispatchTrigger::getCompanyId),
 			new FinderColumn<>(
 				"dispatchTrigger.", "name", FinderColumn.Type.STRING, "=", true,
 				true, DispatchTrigger::getName));
@@ -4517,25 +3830,39 @@ public class DispatchTriggerPersistenceImpl
 			new String[] {"active_", "dispatchTaskClusterMode"}, true);
 
 		_finderPathCountByA_DTCM = new FinderPath(
-			FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION, "countByA_DTCM",
-			new String[] {Boolean.class.getName(), Integer.class.getName()},
-			new String[] {"active_", "dispatchTaskClusterMode"}, false);
-
-		_finderPathWithPaginationCountByA_DTCM = new FinderPath(
 			FINDER_CLASS_NAME_LIST_WITH_PAGINATION, "countByA_DTCM",
 			new String[] {Boolean.class.getName(), Integer.class.getName()},
 			new String[] {"active_", "dispatchTaskClusterMode"}, false);
 
-		_finderPathFetchByERC_C = new FinderPath(
+		_collectionPersistenceFinderByA_DTCM =
+			new CollectionPersistenceFinder<>(
+				this, _finderPathWithPaginationFindByA_DTCM,
+				_finderPathWithoutPaginationFindByA_DTCM,
+				_finderPathCountByA_DTCM, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
+				_SQL_COUNT_DISPATCHTRIGGER_WHERE,
+				DispatchTriggerModelImpl.ORDER_BY_JPQL, _ENTITY_ALIAS_PREFIX,
+				"",
+				new FinderColumn<>(
+					"dispatchTrigger.", "active", FinderColumn.Type.BOOLEAN,
+					"=", true, true, DispatchTrigger::isActive),
+				new ArrayableFinderColumn<>(
+					"dispatchTrigger.", "dispatchTaskClusterMode",
+					FinderColumn.Type.INTEGER, "=", false, true, true,
+					DispatchTrigger::getDispatchTaskClusterMode));
+
+		_finderPathFetchByERC_C = createUniqueFinderPath(
 			FINDER_CLASS_NAME_ENTITY, "fetchByERC_C",
 			new String[] {String.class.getName(), Long.class.getName()},
-			new String[] {"externalReferenceCode", "companyId"}, true);
+			new String[] {"externalReferenceCode", "companyId"}, 0, 1, false,
+			convertNullFunction(DispatchTrigger::getExternalReferenceCode),
+			DispatchTrigger::getCompanyId);
 
 		_uniquePersistenceFinderByERC_C = new UniquePersistenceFinder<>(
 			this, _finderPathFetchByERC_C, _SQL_SELECT_DISPATCHTRIGGER_WHERE,
+			"",
 			new FinderColumn<>(
 				"dispatchTrigger.", "externalReferenceCode",
-				FinderColumn.Type.STRING, "=", true, false,
+				FinderColumn.Type.STRING, "=", true, true,
 				DispatchTrigger::getExternalReferenceCode),
 			new FinderColumn<>(
 				"dispatchTrigger.", "companyId", FinderColumn.Type.LONG, "=",
@@ -4583,14 +3910,14 @@ public class DispatchTriggerPersistenceImpl
 	@Reference
 	protected FinderCache finderCache;
 
+	private static final String _ENTITY_ALIAS_PREFIX =
+		DispatchTriggerModelImpl.ENTITY_ALIAS + ".";
+
 	private static final String _SQL_SELECT_DISPATCHTRIGGER =
 		"SELECT dispatchTrigger FROM DispatchTrigger dispatchTrigger";
 
 	private static final String _SQL_SELECT_DISPATCHTRIGGER_WHERE =
 		"SELECT dispatchTrigger FROM DispatchTrigger dispatchTrigger WHERE ";
-
-	private static final String _SQL_COUNT_DISPATCHTRIGGER =
-		"SELECT COUNT(dispatchTrigger) FROM DispatchTrigger dispatchTrigger";
 
 	private static final String _SQL_COUNT_DISPATCHTRIGGER_WHERE =
 		"SELECT COUNT(dispatchTrigger) FROM DispatchTrigger dispatchTrigger WHERE ";
@@ -4616,12 +3943,7 @@ public class DispatchTriggerPersistenceImpl
 
 	private static final String _FILTER_ENTITY_TABLE = "DispatchTrigger";
 
-	private static final String _ORDER_BY_ENTITY_ALIAS = "dispatchTrigger.";
-
 	private static final String _ORDER_BY_ENTITY_TABLE = "DispatchTrigger.";
-
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DispatchTrigger exists with the primary key ";
 
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DispatchTrigger exists with the key {";
@@ -4638,4 +3960,4 @@ public class DispatchTriggerPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-21787909
+// LIFERAY-SERVICE-BUILDER-HASH:2117176789

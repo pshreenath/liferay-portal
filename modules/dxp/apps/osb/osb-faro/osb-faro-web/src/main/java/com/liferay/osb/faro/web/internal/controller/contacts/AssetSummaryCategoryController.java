@@ -11,6 +11,7 @@ import com.liferay.osb.faro.model.FaroProject;
 import com.liferay.osb.faro.web.internal.controller.BaseFaroController;
 import com.liferay.osb.faro.web.internal.model.display.FaroFDSResultsDisplay;
 import com.liferay.osb.faro.web.internal.model.display.contacts.AssetSummaryCategoryDisplay;
+import com.liferay.petra.string.StringPool;
 
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
@@ -36,11 +37,15 @@ public class AssetSummaryCategoryController extends BaseFaroController {
 	public FaroFDSResultsDisplay getAssetSummaryCategories(
 			@PathParam("groupId") long groupId,
 			@QueryParam("channelId") long channelId,
+			@QueryParam("keywords") String keywords,
+			@QueryParam("page") int page,
+			@DefaultValue("20") @QueryParam("pageSize") int pageSize,
 			@QueryParam("rangeEnd") String rangeEnd,
-			@DefaultValue("30") @QueryParam("rangeKey") int rangeKey,
+			@QueryParam("rangeKey") int rangeKey,
 			@QueryParam("rangeStart") String rangeStart,
-			@QueryParam("cur") int cur,
-			@DefaultValue("20") @QueryParam("delta") int delta)
+			@DefaultValue(StringPool.BLANK) @QueryParam("sort") String
+				sortString,
+			@QueryParam("vocabularyId") String vocabularyId)
 		throws Exception {
 
 		FaroProject faroProject =
@@ -48,13 +53,13 @@ public class AssetSummaryCategoryController extends BaseFaroController {
 
 		Results<AssetSummaryCategory> results =
 			contactsEngineClient.getAssetSummaryCategories(
-				faroProject, channelId, rangeEnd, rangeKey, rangeStart, cur,
-				delta);
+				faroProject, channelId, keywords, rangeEnd, rangeKey,
+				rangeStart, sortString, vocabularyId, page, pageSize);
 
 		Function<AssetSummaryCategory, AssetSummaryCategoryDisplay> function =
 			AssetSummaryCategoryDisplay::new;
 
-		return new FaroFDSResultsDisplay(results, function, cur, delta);
+		return new FaroFDSResultsDisplay(results, function, page, pageSize);
 	}
 
 }

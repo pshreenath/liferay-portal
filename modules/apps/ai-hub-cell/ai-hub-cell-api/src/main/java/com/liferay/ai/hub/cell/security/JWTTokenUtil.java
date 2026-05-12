@@ -5,10 +5,14 @@
 
 package com.liferay.ai.hub.cell.security;
 
+import com.liferay.ai.hub.cell.configuration.AIHubCellConfiguration;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProviderUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.security.SecureRandomUtil;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.util.Base64;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.Validator;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -43,7 +47,7 @@ public class JWTTokenUtil {
 			).build());
 
 		try {
-			signedJWT.sign(new MACSigner(_SECRET));
+			signedJWT.sign(new MACSigner(_getSecret()));
 		}
 		catch (Exception exception) {
 			if (_log.isDebugEnabled()) {
@@ -56,13 +60,13 @@ public class JWTTokenUtil {
 		return signedJWT.serialize();
 	}
 
-	public static long getUserId(String token) {
+	public static long getUserId(String issuer, String token) {
 		JWTClaimsSet jwtClaimsSet = null;
 
 		try {
 			SignedJWT signedJWT = SignedJWT.parse(token);
 
-			if (!signedJWT.verify(new MACVerifier(_SECRET))) {
+			if (!signedJWT.verify(new MACVerifier(_getSecret()))) {
 				if (_log.isDebugEnabled()) {
 					_log.debug("Invalid JWT signature");
 				}
@@ -81,6 +85,16 @@ public class JWTTokenUtil {
 			return 0;
 		}
 
+		if (Validator.isNull(issuer) ||
+			!issuer.equals(jwtClaimsSet.getIssuer())) {
+
+			if (_log.isDebugEnabled()) {
+				_log.debug("Invalid JWT issuer");
+			}
+
+			return 0;
+		}
+
 		Date expirationDate = jwtClaimsSet.getExpirationTime();
 
 		if ((expirationDate == null) || expirationDate.before(new Date())) {
@@ -94,20 +108,15 @@ public class JWTTokenUtil {
 		return GetterUtil.getLong(jwtClaimsSet.getSubject());
 	}
 
-	private static final byte[] _SECRET;
+	private static byte[] _getSecret() throws Exception {
+		AIHubCellConfiguration aiHubCellConfiguration =
+			ConfigurationProviderUtil.getCompanyConfiguration(
+				AIHubCellConfiguration.class,
+				CompanyThreadLocal.getCompanyId());
+
+		return Base64.decode(aiHubCellConfiguration.secret());
+	}
 
 	private static final Log _log = LogFactoryUtil.getLog(JWTTokenUtil.class);
-
-	static {
-		int sha256BlockSize = 64;
-
-		byte[] secret = new byte[sha256BlockSize];
-
-		for (int i = 0; i < secret.length; i++) {
-			secret[i] = SecureRandomUtil.nextByte();
-		}
-
-		_SECRET = secret;
-	}
 
 }

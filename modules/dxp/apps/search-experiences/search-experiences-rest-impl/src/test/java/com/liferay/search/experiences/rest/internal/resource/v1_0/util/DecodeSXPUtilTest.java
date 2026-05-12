@@ -17,7 +17,6 @@ import java.util.Arrays;
 
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 
 /**
@@ -26,15 +25,14 @@ import org.junit.Test;
 public class DecodeSXPUtilTest {
 
 	@ClassRule
-	@Rule
 	public static final LiferayUnitTestRule liferayUnitTestRule =
 		LiferayUnitTestRule.INSTANCE;
 
 	@Test
-	public void testDecodeSXPElement() throws Exception {
-		Field field1 = new Field();
+	public void testDecodeSXPElementWithCollectionDefaultValue()
+		throws Exception {
 
-		field1.setDefaultValue(
+		_testDecodeSXPElementWithDefaultValue(
 			Arrays.asList(
 				HashMapBuilder.put(
 					"label", "com.liferay.blogs.model.BlogsEntry"
@@ -46,13 +44,40 @@ public class DecodeSXPUtilTest {
 				).put(
 					"value", "com.liferay.journal.model.JournalArticle"
 				).build()));
-		field1.setLabel("Entry Class Names");
-		field1.setName("entry_class_names");
-		field1.setType("multiselect");
+	}
+
+	@Test
+	public void testDecodeSXPElementWithObjectArrayDefaultValue()
+		throws Exception {
+
+		_testDecodeSXPElementWithDefaultValue(
+			new Object[] {
+				HashMapBuilder.put(
+					"label", "com.liferay.blogs.model.BlogsEntry"
+				).put(
+					"value", "com.liferay.blogs.model.BlogsEntry"
+				).build(),
+				HashMapBuilder.put(
+					"label", "com.liferay.journal.model.JournalArticle"
+				).put(
+					"value", "com.liferay.journal.model.JournalArticle"
+				).build()
+			});
+	}
+
+	private void _testDecodeSXPElementWithDefaultValue(Object defaultValue)
+		throws Exception {
+
+		Field field = new Field();
+
+		field.setDefaultValue(defaultValue);
+		field.setLabel("Entry Class Names");
+		field.setName("entry_class_names");
+		field.setType("multiselect");
 
 		FieldSet fieldSet = new FieldSet();
 
-		fieldSet.setFields(new Field[] {field1});
+		fieldSet.setFields(new Field[] {field});
 
 		UiConfiguration uiConfiguration = new UiConfiguration();
 
@@ -78,12 +103,21 @@ public class DecodeSXPUtilTest {
 
 		Assert.assertEquals(Arrays.toString(fields), 1, fields.length);
 
-		Field field2 = fields[0];
+		Field decodedField = fields[0];
 
-		Assert.assertEquals("entry_class_names", field2.getName());
-		Assert.assertEquals("multiselect", field2.getType());
+		Assert.assertEquals("entry_class_names", decodedField.getName());
+		Assert.assertEquals("multiselect", decodedField.getType());
 
-		Assert.assertNotNull(field2.getDefaultValue());
+		String defaultValueString = Arrays.deepToString(
+			(Object[])decodedField.getDefaultValue());
+
+		Assert.assertTrue(
+			defaultValueString,
+			defaultValueString.contains("com.liferay.blogs.model.BlogsEntry"));
+		Assert.assertTrue(
+			defaultValueString,
+			defaultValueString.contains(
+				"com.liferay.journal.model.JournalArticle"));
 	}
 
 }
